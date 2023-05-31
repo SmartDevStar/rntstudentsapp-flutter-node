@@ -262,7 +262,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                     color: const Color(0xffffc000)),
                 padding: const EdgeInsets.all(0),
                 child: const Text(
-                  "بازیابی رمز عبور",
+                  "نام کاربری",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
