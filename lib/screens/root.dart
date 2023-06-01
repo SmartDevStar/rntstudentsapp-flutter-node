@@ -13,6 +13,7 @@ import 'package:rnt_app/models/course_model.dart';
 import 'package:rnt_app/models/class_model.dart';
 import 'package:rnt_app/models/resource_model.dart';
 import 'package:rnt_app/models/soa_model.dart';
+import 'package:rnt_app/models/country_model.dart';
 import 'package:rnt_app/models/message_model.dart';
 
 import 'package:rnt_app/utils/utils.dart';
@@ -47,11 +48,13 @@ class _RootPageState extends State<RootPage> {
     'resources': false,
     'students': false,
     'soas': false,
+    'countries': false,
   };
   final List<int> _pageTrack = [];
 
   Course _activeCourse = Course();
   Class _activeClass = Class();
+  Country _activeCountry = Country();
   int? _activeClassID;
 
   List<MyTheme> _themes = List.generate(
@@ -61,15 +64,13 @@ class _RootPageState extends State<RootPage> {
   List<Course> stCourses = [];
   List<Resource> stResources = [];
   List<SOA> stSoas = [];
+  List<Country> stCountries = [];
   Map<String, List<Customer>> stStudentsByCourseID = {};
   final List<Message> _messageList = [];
 
   DateTime? _sessionDateTime = DateTime.now();
   DateTime? _sessionStartingTime = DateTime.now();
   DateTime? _dateOfBirth = DateTime.now();
-
-  String _selectedCountryCode = "+971";
-  String _selectedCountry = "United Arab Emirates";
 
   TextEditingController dateController = TextEditingController(
     text: DateFormat('dd-MM-yyyy').format(DateTime.now()),
@@ -80,7 +81,6 @@ class _RootPageState extends State<RootPage> {
   TextEditingController durationController = TextEditingController(text: "180");
   TextEditingController noteController = TextEditingController();
   TextEditingController emailController = TextEditingController();
-  TextEditingController countryCodeController = TextEditingController();
   TextEditingController contactNumberController = TextEditingController();
   TextEditingController residentCountryIDController = TextEditingController();
   TextEditingController passportNoController = TextEditingController();
@@ -147,6 +147,16 @@ class _RootPageState extends State<RootPage> {
         myCusInfo = Customer.fromJson(decodedMyCusInfo);
       }
     }
+
+    emailController.text = myCusInfo.email ?? "";
+    contactNumberController.text = myCusInfo.contactNumber ?? "";
+    residentCountryIDController.text =
+        myCusInfo.residentCountryID.toString();
+    passportNoController.text = myCusInfo.passportNo ?? "";
+    nationalIDNoController.text = myCusInfo.nationalIDNo ?? "";
+    dateOfBirthController.text = DateFormat('dd-MM-yyyy')
+        .format(DateTime.parse(myCusInfo.dateOfBirth!));
+    nationalCardIDNoController.text = myCusInfo.nationalCardIDNo ?? "";
 
     setState(() {
       isDataLoading['myCusInfo'] = false;
@@ -391,6 +401,47 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
+  Future<void> fetchCountries() async {
+    setState(() {
+      isDataLoading['countries'] = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    bool isError = false;
+    List<Country> countries = [];
+    try {
+      final countryRes = await http.get(Uri.parse('$serverDomain/api/setting/countries'));
+
+      var jsonCountries = json.decode(countryRes.body)[0];
+      if (countryRes.statusCode == 200) {
+        countries = (jsonCountries as List).map((myMap) => Country.fromMap(myMap)).toList();
+        String encodedCountries = json.encode(countries);
+        print("online-Countries : $encodedCountries");
+        await prefs.setString('countries', encodedCountries);
+        isDataFetched['countries'] = true;
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      isError = true;
+    }
+
+    if (isError) {
+      isDataFetched['countries'] = false;
+      final encodedCountries = prefs.getString('countries');
+      if (encodedCountries != null && encodedCountries != "") {
+        print("offline-Countries : $encodedCountries");
+        var decodedCountries = json.decode(encodedCountries);
+        countries = (decodedCountries as List).map((country) => Country.fromJson(country)).toList();
+      }
+    }
+
+    setState(() {
+      isDataLoading['countries'] = false;
+      stCountries = countries;
+    });
+  }
+
   List<Class> getClassesByCourseID(List<Class> allClasses, int courseID) {
     allClasses.sort((a, b) => a.sessionDateTime!.compareTo(b.sessionDateTime!));
     List<Class> todayClasses = allClasses
@@ -429,6 +480,27 @@ class _RootPageState extends State<RootPage> {
       List<Resource> filteredResources =
           allResources.where((item) => item.courseID == courseID).toList();
       return filteredResources;
+    }
+  }
+
+  Country getCountryByID(List<Country> allCounrtries, int nCountryID) {
+    List<Country> countries = [];
+    countries = allCounrtries.where((item) => item.countryID == nCountryID).toList();
+
+    if (countries.isNotEmpty) {
+      return countries[0];
+    } else {
+     return Country(); 
+    }
+  }
+
+  Country getCountryByName(List<Country> allCounrtries, String strCountryName) {
+    List<Country> countries = [];
+    countries = allCounrtries.where((item) => item.countryName == strCountryName).toList();
+    if (countries.isNotEmpty) {
+      return countries[0];
+    } else {
+     return Country(); 
     }
   }
 
@@ -497,7 +569,6 @@ class _RootPageState extends State<RootPage> {
       },
       body: jsonEncode(data),
     );
-
     if (response.statusCode == 200) {
       fetchMyCustomerInfo();
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -534,6 +605,7 @@ class _RootPageState extends State<RootPage> {
     Future.delayed(const Duration(seconds: 1), () async {
       await Future.wait([
         fetchMyCustomerInfo(),
+        fetchCountries(),
         fetchClasses(),
         fetchCourses(),
         fetchResources(),
@@ -555,6 +627,7 @@ class _RootPageState extends State<RootPage> {
     Future.wait([
       fetchMyCustomerInfo(),
       fetchClasses(),
+      fetchCountries(),
     ]);
   }
 
@@ -676,6 +749,7 @@ class _RootPageState extends State<RootPage> {
                               setState(() {
                                 _activePageIdx = 16;
                                 _pageTrack.add(16);
+                                _activeCountry = getCountryByID(stCountries, stMyCustomerInfo.residentCountryID ?? -1);
                               })
                             }
                         },
@@ -904,7 +978,6 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildHomePage() {
-    List<Class> todayNextClasses = getClassesByCourseID(stClasses, -3);
     return Column(
       children: [
         LastNotificationSection(
@@ -2512,7 +2585,7 @@ class _RootPageState extends State<RootPage> {
             ),
             child: Container(
               alignment: Alignment.center,
-              height: 35.0,
+              height: 40.0,
               width: 110,
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(0.0),
@@ -2532,16 +2605,12 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildProfilePage() {
-    emailController.text = stMyCustomerInfo.email ?? "";
-    countryCodeController.text = "+98";
-    contactNumberController.text = stMyCustomerInfo.contactNumber ?? "";
-    residentCountryIDController.text =
-        stMyCustomerInfo.residentCountryID.toString();
-    passportNoController.text = stMyCustomerInfo.passportNo ?? "";
-    nationalIDNoController.text = stMyCustomerInfo.nationalIDNo ?? "";
-    dateOfBirthController.text = DateFormat('dd-MM-yyyy')
-        .format(DateTime.parse(stMyCustomerInfo.dateOfBirth!));
-    nationalCardIDNoController.text = stMyCustomerInfo.nationalCardIDNo ?? "";
+    if (_activeCountry == Country() && !stCountries.contains(Country())) {
+      stCountries.add(Country());
+    }
+    if (_activeCountry != Country() && stCountries.contains(Country())) {
+      stCountries.remove(Country());
+    }
     return Column(
       children: [
         LastNotificationSection(
@@ -2634,7 +2703,7 @@ class _RootPageState extends State<RootPage> {
                           textAlignVertical: TextAlignVertical.bottom,
                           // textDirection: TextDirection.rtl,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontFamily: 'Roboto',
                             color: Colors.white,
                           ),
@@ -2687,17 +2756,17 @@ class _RootPageState extends State<RootPage> {
                       Expanded(
                         child: Container(
                           color: Colors.white,
-                          child: DropdownButton<String>(
-                            value: _selectedCountry,
+                          child: DropdownButton<Country>(
+                            value: _activeCountry,
                             isExpanded: true,
-                            items: countryCodes.map((Map<String, String> item) {
-                              return DropdownMenuItem<String>(
-                                value: item['country'],
+                            items: stCountries.map((Country item) {
+                              return DropdownMenuItem<Country>(
+                                value: item,
                                 child: Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       Text(
-                                        "${item['country']}",
+                                        item.countryName,
                                         style: const TextStyle(
                                           fontFamily: 'Roboto',
                                           color: Colors.black,
@@ -2708,9 +2777,9 @@ class _RootPageState extends State<RootPage> {
                               );
                             }).toList(),
                             underline: Container(),
-                            onChanged: (String? selectedItem) {
+                            onChanged: (Country? selectedItem) {
                               setState(() {
-                                _selectedCountry = selectedItem ?? "United Arab Emirates";
+                                _activeCountry = selectedItem!;
                               });
                             },
                             style: const TextStyle(
@@ -2979,8 +3048,7 @@ class _RootPageState extends State<RootPage> {
                       Map<String, dynamic> customerInfo = {
                         "email": emailController.text,
                         "contactNumber": contactNumberController.text,
-                        "residentCountryID":
-                            int.parse(residentCountryIDController.text),
+                        "residentCountryID": _activeCountry.countryID,
                         "passportNo": passportNoController.text,
                         "nationalIDNo": nationalIDNoController.text,
                         "dateOfBirth": _dateOfBirth.toString(),
