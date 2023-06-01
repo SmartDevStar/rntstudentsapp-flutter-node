@@ -60,7 +60,6 @@ class _RegisterPageState extends State<RegisterPage> {
     };
     var res = await http.Client().post(Uri.parse(url), body: body);
     if (res.statusCode == 200) {
-      print("Response status: ${res.statusCode}, Response body: ${res.body}");
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -71,7 +70,6 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => const LoginPage()));
     } else {
-      print("Response status: ${res.statusCode}, Response body: ${res.body}");
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(

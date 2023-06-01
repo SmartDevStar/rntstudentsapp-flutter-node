@@ -67,7 +67,6 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _saveAppTheme(List<MyTheme> themes) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String encodedThemeData = json.encode(themes);
-    print(encodedThemeData);
     await prefs.setString('appTheme', encodedThemeData);
   }
 

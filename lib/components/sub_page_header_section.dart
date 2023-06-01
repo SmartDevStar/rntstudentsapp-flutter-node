@@ -251,7 +251,7 @@ class SubPageHeaderSection extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(0),
                       child: Text(
-                        teacherName!,
+                        teacherName ?? "",
                         textAlign: TextAlign.right,
                         style: TextStyle(
                           fontSize: 16,

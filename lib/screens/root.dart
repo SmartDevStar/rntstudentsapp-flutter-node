@@ -52,6 +52,7 @@ class _RootPageState extends State<RootPage> {
 
   Course _activeCourse = Course();
   Class _activeClass = Class();
+  int? _activeClassID;
 
   List<MyTheme> _themes = List.generate(
       defaultThemes.length, (index) => MyTheme.fromMap(defaultThemes[index]));
@@ -67,13 +68,16 @@ class _RootPageState extends State<RootPage> {
   DateTime? _sessionStartingTime = DateTime.now();
   DateTime? _dateOfBirth = DateTime.now();
 
+  String _selectedCountryCode = "+971";
+  String _selectedCountry = "United Arab Emirates";
+
   TextEditingController dateController = TextEditingController(
     text: DateFormat('dd-MM-yyyy').format(DateTime.now()),
   );
   TextEditingController timeController = TextEditingController(
     text: DateFormat('HH:mm').format(DateTime.now()),
   );
-  TextEditingController durationController = TextEditingController(text: "90");
+  TextEditingController durationController = TextEditingController(text: "180");
   TextEditingController noteController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController countryCodeController = TextEditingController();
@@ -429,7 +433,7 @@ class _RootPageState extends State<RootPage> {
   }
 
   Future<void> addClass(
-    int classID,
+    int? classID,
     String sessionDateTime,
     String sessionStartingTime,
     int sessionDuration,
@@ -437,7 +441,7 @@ class _RootPageState extends State<RootPage> {
   ) async {
     String url = "$serverDomain/api/courses/addclass";
     Map body = {
-      "classID": 1004,
+      "classID": _activeClassID  ?? 0,
       "sessionDateTime": sessionDateTime,
       "sessionStartingTime": sessionStartingTime,
       "sessionDuration": sessionDuration,
@@ -445,6 +449,7 @@ class _RootPageState extends State<RootPage> {
       "sessionDeliveryStatusID": 6,
       "sessionUpdatedBy": sessionUpdatedBy,
     };
+    print(body);
     SharedPreferences prefs = await SharedPreferences.getInstance();
     dynamic token = prefs.getString("jwt");
     final res = await http.put(
@@ -1043,22 +1048,23 @@ class _RootPageState extends State<RootPage> {
                                 ),
                               ),
                               isDataLoading['myClasses']!
-                                ? const LoadingView()
-                                : Padding(
-                                padding: const EdgeInsets.only(top: 2.0),
-                                child: Text(
-                                  todayNextClasses.isNotEmpty
-                                      ? todayNextClasses[0].sessionDateTime!
-                                      : "No more next schedules for today",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontFamily: 'Roboto',
-                                    color: convertHexToColor(
-                                        _themes[0].datafontColor!),
-                                  ),
-                                ),
-                              ),
+                                  ? const LoadingView()
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 2.0),
+                                      child: Text(
+                                        todayNextClasses.isNotEmpty
+                                            ? todayNextClasses[0]
+                                                .sessionDateTime!
+                                            : "No more next schedules for today",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontFamily: 'Roboto',
+                                          color: convertHexToColor(
+                                              _themes[0].datafontColor!),
+                                        ),
+                                      ),
+                                    ),
                             ],
                           ),
                         ),
@@ -1410,33 +1416,33 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myCourses']!
-            ? const LoadingView()
-            : stCourses.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        stCourses.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.myCourses,
-                          courseName: stCourses[index].courseDescription,
-                          icon: Icons.book,
-                          svgIcon: "assets/images/rescources.svg",
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                          onTap: () {
-                            setState(() {
-                              _activeCourse = stCourses[index];
-                              _activePageIdx = 5;
-                              _pageTrack.add(5);
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  )
-                : const NullDataView(),
+                ? const LoadingView()
+                : stCourses.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            stCourses.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.myCourses,
+                              courseName: stCourses[index].courseDescription,
+                              icon: Icons.book,
+                              svgIcon: "assets/images/rescources.svg",
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                              onTap: () {
+                                setState(() {
+                                  _activeCourse = stCourses[index];
+                                  _activePageIdx = 5;
+                                  _pageTrack.add(5);
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1551,6 +1557,7 @@ class _RootPageState extends State<RootPage> {
   Widget _buildMyClassSchedulePage() {
     List<Class> myClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
+    _activeClassID = myClasses.isNotEmpty ? myClasses[0].classID : 0;
     return Column(
       children: [
         LastNotificationSection(
@@ -1577,30 +1584,30 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : myClasses.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        myClasses.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.classSchedule,
-                          title: myClasses[index].classTitle,
-                          classStartDate: myClasses[index].sessionDateTime,
-                          classStateId:
-                              myClasses[index].sessionDeliveryStatusID,
-                          classStateDescription:
-                              myClasses[index].sessionStatusDescription,
-                          icon: Icons.calendar_month,
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : myClasses.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            myClasses.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.classSchedule,
+                              title: myClasses[index].classTitle,
+                              classStartDate: myClasses[index].sessionDateTime,
+                              classStateId:
+                                  myClasses[index].sessionDeliveryStatusID,
+                              classStateDescription:
+                                  myClasses[index].sessionStatusDescription,
+                              icon: Icons.calendar_month,
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1629,29 +1636,30 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : classes.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        classes.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.classSchedule,
-                          title: classes[index].classTitle,
-                          classStartDate: classes[index].sessionDateTime,
-                          classStateId: classes[index].sessionDeliveryStatusID,
-                          classStateDescription:
-                              classes[index].sessionStatusDescription,
-                          icon: Icons.calendar_month,
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : classes.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            classes.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.classSchedule,
+                              title: classes[index].classTitle,
+                              classStartDate: classes[index].sessionDateTime,
+                              classStateId:
+                                  classes[index].sessionDeliveryStatusID,
+                              classStateDescription:
+                                  classes[index].sessionStatusDescription,
+                              icon: Icons.calendar_month,
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1683,39 +1691,40 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : classes.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        classes.length,
-                        (index) => SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: SubPageListItem(
-                            subListType: SubPageListType.recordedClasses,
-                            recordClassScreen: "assets/images/record_class.png",
-                            recordDuration: classes[index].sessionDuration,
-                            icon: Icons.camera,
-                            svgIcon: "assets/images/record.svg",
-                            labelColor:
-                                convertHexToColor(_themes[0].labelFontColor!),
-                            dataColor:
-                                convertHexToColor(_themes[0].datafontColor!),
-                            onLinkRecordClass: () async {
-                              final uri = Uri.parse(
-                                  classes[index].sessionRecodingWebLink!);
-                              if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri);
-                              } else {
-                                throw 'Could not launch';
-                              }
-                            },
-                          ),
-                        ),
+                ? const LoadingView()
+                : classes.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            classes.length,
+                            (index) => SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: SubPageListItem(
+                                subListType: SubPageListType.recordedClasses,
+                                recordClassScreen:
+                                    "assets/images/record_class.png",
+                                recordDuration: classes[index].sessionDuration,
+                                icon: Icons.camera,
+                                svgIcon: "assets/images/record.svg",
+                                labelColor: convertHexToColor(
+                                    _themes[0].labelFontColor!),
+                                dataColor: convertHexToColor(
+                                    _themes[0].datafontColor!),
+                                onLinkRecordClass: () async {
+                                  final uri = Uri.parse(
+                                      classes[index].sessionRecodingWebLink!);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri);
+                                  } else {
+                                    throw 'Could not launch';
+                                  }
+                                },
+                              ),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1747,27 +1756,27 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['resources']!
-            ? const LoadingView()
-            : resources.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        resources.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.studyResources,
-                          title: resources[index].resourceDescription,
-                          publisher: resources[index].resourcePublisher,
-                          icon: Icons.book,
-                          svgIcon: "assets/images/rescources.svg",
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : resources.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            resources.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.studyResources,
+                              title: resources[index].resourceDescription,
+                              publisher: resources[index].resourcePublisher,
+                              icon: Icons.book,
+                              svgIcon: "assets/images/rescources.svg",
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1802,36 +1811,37 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['students']!
-            ? const LoadingView()
-            : stStudentsByCourseID.containsKey('students/$courseID')
-                ? stStudentsByCourseID['students/$courseID']!.isNotEmpty
-                    ? Column(
-                        children: [
-                          ...List.generate(
-                            stStudentsByCourseID['students/$courseID']!.length,
-                            (index) => SubPageListItem(
-                              subListType: SubPageListType.studentsList,
-                              title:
-                                  "${stStudentsByCourseID['students/$courseID']![index].FirstName} ${stStudentsByCourseID['students/$courseID']![index].LastName}",
-                              studentEmail: stStudentsByCourseID[
-                                      'students/$courseID']![index]
-                                  .email,
-                              studentContactNo: stStudentsByCourseID[
-                                      'students/$courseID']![index]
-                                  .contactNumber,
-                              studentAvatar: stStudentsByCourseID[
-                                      'students/$courseID']![index]
-                                  .profilePhotoWebAddress,
-                              labelColor:
-                                  convertHexToColor(_themes[0].labelFontColor!),
-                              dataColor:
-                                  convertHexToColor(_themes[0].datafontColor!),
-                            ),
+                ? const LoadingView()
+                : stStudentsByCourseID.containsKey('students/$courseID')
+                    ? stStudentsByCourseID['students/$courseID']!.isNotEmpty
+                        ? Column(
+                            children: [
+                              ...List.generate(
+                                stStudentsByCourseID['students/$courseID']!
+                                    .length,
+                                (index) => SubPageListItem(
+                                  subListType: SubPageListType.studentsList,
+                                  title:
+                                      "${stStudentsByCourseID['students/$courseID']![index].FirstName} ${stStudentsByCourseID['students/$courseID']![index].LastName}",
+                                  studentEmail: stStudentsByCourseID[
+                                          'students/$courseID']![index]
+                                      .email,
+                                  studentContactNo: stStudentsByCourseID[
+                                          'students/$courseID']![index]
+                                      .contactNumber,
+                                  studentAvatar: stStudentsByCourseID[
+                                          'students/$courseID']![index]
+                                      .profilePhotoWebAddress,
+                                  labelColor: convertHexToColor(
+                                      _themes[0].labelFontColor!),
+                                  dataColor: convertHexToColor(
+                                      _themes[0].datafontColor!),
+                                ),
+                              )
+                            ],
                           )
-                        ],
-                      )
-                    : const NullDataView()
-                : const NullDataView(),
+                        : const NullDataView()
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1861,37 +1871,38 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : classes.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        classes.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.todayClasses,
-                          title: classes[index].classTitle,
-                          classStartDate: classes[index].sessionDateTime,
-                          classStateId: classes[index].sessionDeliveryStatusID,
-                          classStateDescription:
-                              classes[index].sessionStatusDescription,
-                          icon: Icons.class_rounded,
-                          svgIcon: "assets/images/class.svg",
-                          onJoinClass: () {
-                            setState(() {
-                              _activeClass = classes[index];
-                              _activePageIdx = 14;
-                              _pageTrack.add(14);
-                            });
-                          },
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : classes.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            classes.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.todayClasses,
+                              title: classes[index].classTitle,
+                              classStartDate: classes[index].sessionDateTime,
+                              classStateId:
+                                  classes[index].sessionDeliveryStatusID,
+                              classStateDescription:
+                                  classes[index].sessionStatusDescription,
+                              icon: Icons.class_rounded,
+                              svgIcon: "assets/images/class.svg",
+                              onJoinClass: () {
+                                setState(() {
+                                  _activeClass = classes[index];
+                                  _activePageIdx = 14;
+                                  _pageTrack.add(14);
+                                });
+                              },
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1924,28 +1935,31 @@ class _RootPageState extends State<RootPage> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: isDataLoading['soas']!
-                    ? const LoadingView()
-                    : stSoas.isNotEmpty
-                      ? Column(
-                          children: [
-                            ...List.generate(
-                              stSoas.length,
-                              (index) => SubPageListItem(
-                                subListType: SubPageListType.financialStatement,
-                                transactionDate: stSoas[index].transactionDate,
-                                soaType: stSoas[index].type,
-                                netTotalAmount: stSoas[index].netTotalAmount,
-                                icon: Icons.note_alt_outlined,
-                                svgIcon: "assets/images/money.svg",
-                                labelColor: convertHexToColor(
-                                    _themes[0].labelFontColor!),
-                                dataColor: convertHexToColor(
-                                    _themes[0].datafontColor!),
-                              ),
+                      ? const LoadingView()
+                      : stSoas.isNotEmpty
+                          ? Column(
+                              children: [
+                                ...List.generate(
+                                  stSoas.length,
+                                  (index) => SubPageListItem(
+                                    subListType:
+                                        SubPageListType.financialStatement,
+                                    transactionDate:
+                                        stSoas[index].transactionDate,
+                                    soaType: stSoas[index].type,
+                                    netTotalAmount:
+                                        stSoas[index].netTotalAmount,
+                                    icon: Icons.note_alt_outlined,
+                                    svgIcon: "assets/images/money.svg",
+                                    labelColor: convertHexToColor(
+                                        _themes[0].labelFontColor!),
+                                    dataColor: convertHexToColor(
+                                        _themes[0].datafontColor!),
+                                  ),
+                                )
+                              ],
                             )
-                          ],
-                        )
-                      : const NullDataView(),
+                          : const NullDataView(),
                 ),
               ),
               Container(
@@ -2157,9 +2171,9 @@ class _RootPageState extends State<RootPage> {
                             );
                             if (selectedTime != null) {
                               _sessionStartingTime = DateTime(
-                                now.year,
-                                now.month,
-                                now.day,
+                                _sessionDateTime!.year,
+                                _sessionDateTime!.month,
+                                _sessionDateTime!.day,
                                 selectedTime.hour,
                                 selectedTime.minute,
                               );
@@ -2278,42 +2292,43 @@ class _RootPageState extends State<RootPage> {
                   ),
                 ),
                 Container(
-                    alignment: Alignment.center,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        addClass(
-                            1004,
-                            _sessionDateTime.toString(),
-                            _sessionStartingTime.toString(),
-                            int.parse(durationController.text),
-                            stMyCustomerInfo.customerID!);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.all(0),
-                        shape: RoundedRectangleBorder(
+                  alignment: Alignment.center,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      addClass(
+                          _activeClassID,
+                          _sessionDateTime.toString(),
+                          _sessionStartingTime.toString(),
+                          int.parse(durationController.text),
+                          stMyCustomerInfo.customerID!);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(0.0),
+                      ),
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      height: 40.0,
+                      width: 90,
+                      decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(0.0),
+                          color: const Color(0xffffc000)),
+                      padding: const EdgeInsets.all(0),
+                      child: const Text(
+                        "ذخیره",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
                         ),
                       ),
-                      child: Container(
-                        alignment: Alignment.center,
-                        height: 40.0,
-                        width: 90,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(0.0),
-                            color: const Color(0xffffc000)),
-                        padding: const EdgeInsets.all(0),
-                        child: const Text(
-                          "ذخیره",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    )),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2622,40 +2637,6 @@ class _RootPageState extends State<RootPage> {
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: countryCodeController,
-                          textAlign: TextAlign.right,
-                          textAlignVertical: TextAlignVertical.bottom,
-                          // textDirection: TextDirection.rtl,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Roboto',
-                            color: Colors.black,
-                          ),
-                          decoration: InputDecoration(
-                              hintText: 'Country Code',
-                              hintStyle: const TextStyle(color: Colors.grey),
-                              filled: true,
-                              fillColor: Colors.white,
-                              enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red)),
-                              focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red))),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
                           controller: contactNumberController,
                           textAlign: TextAlign.right,
                           textAlignVertical: TextAlignVertical.bottom,
@@ -2663,13 +2644,13 @@ class _RootPageState extends State<RootPage> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontFamily: 'Roboto',
-                            color: Colors.black,
+                            color: Colors.white,
                           ),
                           decoration: InputDecoration(
-                              hintText: 'Number',
+                              hintText: 'Phone number with prefix code..',
                               hintStyle: const TextStyle(color: Colors.grey),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: convertHexToColor(_themes[1].bgColor!),
                               enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(0),
                                   borderSide: const BorderSide(
@@ -2709,40 +2690,45 @@ class _RootPageState extends State<RootPage> {
                   color: const Color(0xFF323F4F),
                   height: 57,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: residentCountryIDController,
-                          textAlign: TextAlign.right,
-                          textAlignVertical: TextAlignVertical.bottom,
-                          // textDirection: TextDirection.rtl,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Roboto',
-                            color: Colors.black,
+                        child: Container(
+                          color: Colors.white,
+                          child: DropdownButton<String>(
+                            value: _selectedCountry,
+                            isExpanded: true,
+                            items: countryCodes.map((Map<String, String> item) {
+                              return DropdownMenuItem<String>(
+                                value: item['country'],
+                                child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        "${item['country']}",
+                                        style: const TextStyle(
+                                          fontFamily: 'Roboto',
+                                          color: Colors.black,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ]),
+                              );
+                            }).toList(),
+                            underline: Container(),
+                            onChanged: (String? selectedItem) {
+                              setState(() {
+                                _selectedCountry = selectedItem ?? "United Arab Emirates";
+                              });
+                            },
+                            style: const TextStyle(
+                              fontSize:16,
+                            ),
                           ),
-                          decoration: InputDecoration(
-                              hintText: 'Country',
-                              hintStyle: const TextStyle(color: Colors.grey),
-                              filled: true,
-                              fillColor: Colors.white,
-                              enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red)),
-                              focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red))),
                         ),
+                      ),
+                      const SizedBox(
+                        width: 30,
                       ),
                       Padding(
                         padding: const EdgeInsets.only(left: 5),

@@ -28,7 +28,6 @@ class _ContactUsPageState extends State<ContactUsPage> {
   void _handleRadioValueChange(String? value) {
     setState(() {
       _userRole = value!;
-      print('User Role: $value');
     });
   }
 

@@ -86,3 +86,9 @@ List<Color> colorOfClassStates = [
   const Color(0xffff0000),
   const Color(0xffff0000),
 ];
+
+List<Map<String, String>> countryCodes = [
+  { 'country':  'United Arab Emirates', 'countryCode': '+971' },
+  { 'country':  'Norway', 'countryCode': '+47' },
+  { 'country':  'Chile', 'countryCode': '+56' },
+];

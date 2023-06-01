@@ -541,10 +541,7 @@ class SubPageListItem extends StatelessWidget {
                     alignment: Alignment.center,
                     margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 3),
                     child: ElevatedButton(
-                      onPressed: () {
-                        // signIn(usernameController.text, passwordController.text);
-                        print("Joini button clicked.");
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.all(0),
                         shape: RoundedRectangleBorder(

@@ -52,7 +52,6 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
 
     var jsonUser = json.decode(response.body)[0];
     if (response.statusCode == 200 && jsonUser.isNotEmpty) {
-      print(jsonUser);
       if (jsonUser[0]["loginEmailAddress"] == emailController.text) {
         final response = await http.put(
           Uri.parse(
@@ -66,7 +65,6 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
           }),
         );
         if (response.statusCode == 200) {
-          print("Succesfully requested..");
           Navigator.push(context,
               MaterialPageRoute(builder: (context) => const CheckEmailPage()));
         } else {
