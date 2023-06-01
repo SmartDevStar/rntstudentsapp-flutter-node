@@ -441,7 +441,7 @@ class _RootPageState extends State<RootPage> {
   ) async {
     String url = "$serverDomain/api/courses/addclass";
     Map body = {
-      "classID": _activeClassID  ?? 0,
+      "classID": _activeClassID  ?? -1,
       "sessionDateTime": sessionDateTime,
       "sessionStartingTime": sessionStartingTime,
       "sessionDuration": sessionDuration,
@@ -1047,24 +1047,6 @@ class _RootPageState extends State<RootPage> {
                                   ),
                                 ),
                               ),
-                              isDataLoading['myClasses']!
-                                  ? const LoadingView()
-                                  : Padding(
-                                      padding: const EdgeInsets.only(top: 2.0),
-                                      child: Text(
-                                        todayNextClasses.isNotEmpty
-                                            ? todayNextClasses[0]
-                                                .sessionDateTime!
-                                            : "No more next schedules for today",
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontFamily: 'Roboto',
-                                          color: convertHexToColor(
-                                              _themes[0].datafontColor!),
-                                        ),
-                                      ),
-                                    ),
                             ],
                           ),
                         ),
@@ -1557,7 +1539,7 @@ class _RootPageState extends State<RootPage> {
   Widget _buildMyClassSchedulePage() {
     List<Class> myClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
-    _activeClassID = myClasses.isNotEmpty ? myClasses[0].classID : 0;
+    _activeClassID = myClasses.isNotEmpty ? myClasses[0].classID : -1;
     return Column(
       children: [
         LastNotificationSection(
@@ -1574,10 +1556,20 @@ class _RootPageState extends State<RootPage> {
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
           onAddClass: () {
-            setState(() {
-              _activePageIdx = 13;
-              _pageTrack.add(13);
-            });
+            if (_activeClassID == -1) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text(
+                  "Couldn't create class for this course",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ));
+            } else {
+              setState(() {
+                _activePageIdx = 13;
+                _pageTrack.add(13);
+              });
+            }
           },
         ),
         Expanded(
