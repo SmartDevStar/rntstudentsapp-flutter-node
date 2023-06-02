@@ -1,11 +1,16 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:rnt_app/models/theme_model.dart';
 import 'package:rnt_app/models/customer_model.dart';
@@ -57,6 +62,7 @@ class _RootPageState extends State<RootPage> {
   Class _activeClass = Class();
   Country _activeCountry = Country();
   int? _activeClassID;
+  File? _avatarImage;
 
   List<MyTheme> _themes = List.generate(
       defaultThemes.length, (index) => MyTheme.fromMap(defaultThemes[index]));
@@ -625,6 +631,76 @@ class _RootPageState extends State<RootPage> {
       });
     });
   }
+
+  Future<File?> pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile != null) {
+      return File(pickedFile.path);
+    } else {
+      return null;
+    }
+  }
+
+  void _handleAvatarUploadButtonPressed() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+    int customerID = stMyCustomerInfo.customerID!;
+    String url = "$serverDomain/api/customers/upload/$customerID";
+    
+    final imageFile = await pickImage(ImageSource.gallery);
+
+    var uploadRequest = http.MultipartRequest(
+      'POST',
+      Uri.parse(url),
+    );
+
+    if (imageFile == null) {
+      return;
+    }
+    
+    // Add image file to request
+    uploadRequest.files.add(
+      await http.MultipartFile.fromPath(
+        'file', 
+        imageFile.path,
+        contentType: MediaType.parse(lookupMimeType(imageFile.path)!),
+      ),
+    );
+
+    uploadRequest.headers['Authorization'] = 'Bearer $token';
+    var response = await uploadRequest.send();
+
+    String encodedResponse = await response.stream.bytesToString();
+    Map<String, dynamic> decodedResonese = jsonDecode(encodedResponse);
+
+    if (response.statusCode == 200) {
+      setState(() {
+        _avatarImage = imageFile;
+      });
+      fetchMyCustomerInfo();
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Successfully uploaded..",
+          style: TextStyle(
+            color: Colors.green,
+          ),
+        ),
+      ));
+    } else {
+      print(decodedResonese);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Something's wrong...",
+          style: TextStyle(color: Colors.red),
+        ),
+      ));
+    }
+  }
+
 
   @override
   void initState() {
@@ -1772,7 +1848,7 @@ class _RootPageState extends State<RootPage> {
                           ...List.generate(
                             classes.length,
                             (index) => RecordedClassListItem(
-                              sessionRecodingWebLink: "https://teams.microsoft.com/l/meetup-join/19:517d7d0e2fe6493b92492bbe1e422b3b@thread.tacv2/1666172375420?context=%7B%22Tid%22:%22596ae5cb-cb16-40dd-916b-c06b6605c4b3%22,%22Oid%22:%22e263eee8-3aee-4ce3-a01d-f9d10eddf388%22%7D",
+                              sessionRecodingWebLink:"https://teams.microsoft.com/_#/pre-join-calling/19:13fd9387cedb4397a1a2a4e734bcd5d4@thread.tacv2", 
                                   // classes[index].sessionRecodingWebLink ?? "",
                               classStartDate: classes[index].sessionDateTime ??
                                   DateTime.now().toString(),
@@ -2622,11 +2698,11 @@ class _RootPageState extends State<RootPage> {
         SubPageHeaderSection(
           title: "اطلاعات شخصی",
           headerType: SubPageHeaderType.profile,
-          // avatarImage: _avatarImage,
+          avatarImage: _avatarImage,
           avatarAddress: stMyCustomerInfo.profilePhotoWebAddress,
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
-          // onHeaderIconClicked: _handleAvatarUploadButtonPressed,
+          onHeaderIconClicked: _handleAvatarUploadButtonPressed,
         ),
         Expanded(
           child: SingleChildScrollView(

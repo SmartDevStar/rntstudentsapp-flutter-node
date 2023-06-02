@@ -41,6 +41,9 @@ dependencies:
   url_launcher: ^6.1.11
   any_link_preview: ^3.0.0
   http: ^0.13.6
+  image_picker: ^0.8.7+5
+  http_parser: ^4.0.2
+  mime: ^1.0.4
 
 dev_dependencies:
   flutter_test:
