@@ -5,7 +5,7 @@ Color convertHexToColor (String hexColor) {
   return Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
 }
 
-String convertDateTimeFormat(String datetime, String format) {
+String convertDateTimeFormat(String datetime, String? format) {
   List<String> daysOfWeek = ['یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'];
 
   DateTime dateTime = DateTime.parse(datetime);

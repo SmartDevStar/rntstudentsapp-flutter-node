@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+
 import 'package:rnt_app/utils/consts.dart';
 import 'package:rnt_app/utils/utils.dart';
-import 'package:intl/intl.dart';
 
 class SubPageListItem extends StatelessWidget {
 
@@ -445,8 +447,19 @@ class SubPageListItem extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0, top: 15.0),
+                        child: Text(
+                          convertDateTimeFormat(classStartDate ?? DateTime.now().toString(), ""),
+                          style: TextStyle(
+                            color: dataColor,
+                            fontFamily: 'Roboto',
+                            fontSize: 18,
+                          ),
+                        ), 
+                      ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 30),
                         child: IconTheme(
@@ -476,7 +489,7 @@ class SubPageListItem extends StatelessWidget {
                           convertToTime(recordDuration!),
                           textAlign: TextAlign.left,
                           style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 17,
                               color: dataColor,
                               fontFamily: 'Roboto'
                           ),

@@ -27,6 +27,7 @@ import 'package:rnt_app/widgets/bottombar_item.dart';
 import 'package:rnt_app/components/last_notification_section.dart';
 import 'package:rnt_app/components/sub_page_header_section.dart';
 import 'package:rnt_app/components/sub_page_list_item.dart';
+import 'package:rnt_app/components/recorded_class_list_item.dart';
 
 import 'package:rnt_app/screens/login.dart';
 
@@ -150,12 +151,11 @@ class _RootPageState extends State<RootPage> {
 
     emailController.text = myCusInfo.email ?? "";
     contactNumberController.text = myCusInfo.contactNumber ?? "";
-    residentCountryIDController.text =
-        myCusInfo.residentCountryID.toString();
+    residentCountryIDController.text = myCusInfo.residentCountryID.toString();
     passportNoController.text = myCusInfo.passportNo ?? "";
     nationalIDNoController.text = myCusInfo.nationalIDNo ?? "";
-    dateOfBirthController.text = DateFormat('dd-MM-yyyy')
-        .format(DateTime.parse(myCusInfo.dateOfBirth!));
+    dateOfBirthController.text =
+        DateFormat('dd-MM-yyyy').format(DateTime.parse(myCusInfo.dateOfBirth!));
     nationalCardIDNoController.text = myCusInfo.nationalCardIDNo ?? "";
 
     setState(() {
@@ -410,11 +410,14 @@ class _RootPageState extends State<RootPage> {
     bool isError = false;
     List<Country> countries = [];
     try {
-      final countryRes = await http.get(Uri.parse('$serverDomain/api/setting/countries'));
+      final countryRes =
+          await http.get(Uri.parse('$serverDomain/api/setting/countries'));
 
       var jsonCountries = json.decode(countryRes.body)[0];
       if (countryRes.statusCode == 200) {
-        countries = (jsonCountries as List).map((myMap) => Country.fromMap(myMap)).toList();
+        countries = (jsonCountries as List)
+            .map((myMap) => Country.fromMap(myMap))
+            .toList();
         String encodedCountries = json.encode(countries);
         print("online-Countries : $encodedCountries");
         await prefs.setString('countries', encodedCountries);
@@ -432,7 +435,9 @@ class _RootPageState extends State<RootPage> {
       if (encodedCountries != null && encodedCountries != "") {
         print("offline-Countries : $encodedCountries");
         var decodedCountries = json.decode(encodedCountries);
-        countries = (decodedCountries as List).map((country) => Country.fromJson(country)).toList();
+        countries = (decodedCountries as List)
+            .map((country) => Country.fromJson(country))
+            .toList();
       }
     }
 
@@ -485,22 +490,25 @@ class _RootPageState extends State<RootPage> {
 
   Country getCountryByID(List<Country> allCounrtries, int nCountryID) {
     List<Country> countries = [];
-    countries = allCounrtries.where((item) => item.countryID == nCountryID).toList();
+    countries =
+        allCounrtries.where((item) => item.countryID == nCountryID).toList();
 
     if (countries.isNotEmpty) {
       return countries[0];
     } else {
-     return Country(); 
+      return Country();
     }
   }
 
   Country getCountryByName(List<Country> allCounrtries, String strCountryName) {
     List<Country> countries = [];
-    countries = allCounrtries.where((item) => item.countryName == strCountryName).toList();
+    countries = allCounrtries
+        .where((item) => item.countryName == strCountryName)
+        .toList();
     if (countries.isNotEmpty) {
       return countries[0];
     } else {
-     return Country(); 
+      return Country();
     }
   }
 
@@ -513,7 +521,7 @@ class _RootPageState extends State<RootPage> {
   ) async {
     String url = "$serverDomain/api/courses/addclass";
     Map body = {
-      "classID": _activeClassID  ?? -1,
+      "classID": _activeClassID ?? -1,
       "sessionDateTime": sessionDateTime,
       "sessionStartingTime": sessionStartingTime,
       "sessionDuration": sessionDuration,
@@ -749,7 +757,8 @@ class _RootPageState extends State<RootPage> {
                               setState(() {
                                 _activePageIdx = 16;
                                 _pageTrack.add(16);
-                                _activeCountry = getCountryByID(stCountries, stMyCustomerInfo.residentCountryID ?? -1);
+                                _activeCountry = getCountryByID(stCountries,
+                                    stMyCustomerInfo.residentCountryID ?? -1);
                               })
                             }
                         },
@@ -1629,11 +1638,11 @@ class _RootPageState extends State<RootPage> {
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
           onAddClass: () {
-            if (_activeClassID == -1) {
+            if (_activeClassID == -1 || stMyCustomerInfo.customerTypeID == 1) {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text(
-                  "Couldn't create class for this course",
+                  "Couldn't create a new class",
                   style: TextStyle(color: Colors.red),
                 ),
               ));
@@ -1762,31 +1771,21 @@ class _RootPageState extends State<RootPage> {
                         children: [
                           ...List.generate(
                             classes.length,
-                            (index) => SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
-                              child: SubPageListItem(
-                                subListType: SubPageListType.recordedClasses,
-                                recordClassScreen:
-                                    "assets/images/record_class.png",
-                                recordDuration: classes[index].sessionDuration,
-                                icon: Icons.camera,
-                                svgIcon: "assets/images/record.svg",
-                                labelColor: convertHexToColor(
-                                    _themes[0].labelFontColor!),
-                                dataColor: convertHexToColor(
-                                    _themes[0].datafontColor!),
-                                onLinkRecordClass: () async {
-                                  final uri = Uri.parse(
-                                      classes[index].sessionRecodingWebLink!);
-                                  if (await canLaunchUrl(uri)) {
-                                    await launchUrl(uri);
-                                  } else {
-                                    throw 'Could not launch';
-                                  }
-                                },
-                              ),
+                            (index) => RecordedClassListItem(
+                              sessionWebLink:
+                                  classes[index].sessionWebLink ?? "",
+                              classStartDate: classes[index].sessionDateTime ??
+                                  DateTime.now().toString(),
+                              recordDuration:
+                                  classes[index].sessionDuration ?? 180,
+                              icon: Icons.camera,
+                              svgIcon: "assets/images/record.svg",
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
                             ),
-                          )
+                          ),
                         ],
                       )
                     : const NullDataView(),
@@ -2783,7 +2782,7 @@ class _RootPageState extends State<RootPage> {
                               });
                             },
                             style: const TextStyle(
-                              fontSize:16,
+                              fontSize: 16,
                             ),
                           ),
                         ),
