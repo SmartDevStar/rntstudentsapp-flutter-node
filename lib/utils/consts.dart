@@ -78,13 +78,24 @@ List<String> classStates = [
   "برگذار نشد",
   "طبق برنامه",
   "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
 ];
 
 List<Color> colorOfClassStates = [
   const Color(0xff00ff00),
   const Color(0xffffc000),
   const Color(0xffff0000),
-  const Color(0xffff0000),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
 ];
 
 List<Map<String, String>> countryCodes = [

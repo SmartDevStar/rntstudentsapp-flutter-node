@@ -127,7 +127,7 @@ class _RootPageState extends State<RootPage> {
         var jsonMyCusInfo = json.decode(myCusInfoRes.body)[0];
         String encodedMyCusInfo =
             json.encode(Customer.fromMap(jsonMyCusInfo[0]));
-        print("online-myCusInfo : $encodedMyCusInfo");
+        // print("online-myCusInfo : $encodedMyCusInfo");
         await prefs.setString('myCusInfo', encodedMyCusInfo);
         myCusInfo = Customer.fromMap(jsonMyCusInfo[0]);
 
@@ -143,7 +143,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['myCusInfo'] = false;
       final encodedMyCusInfo = prefs.getString('myCusInfo');
       if (encodedMyCusInfo != null && encodedMyCusInfo != "") {
-        print("offline-myCusInfo : $encodedMyCusInfo");
+        // print("offline-myCusInfo : $encodedMyCusInfo");
         var decodedMyCusInfo = json.decode(encodedMyCusInfo);
         myCusInfo = Customer.fromJson(decodedMyCusInfo);
       }
@@ -184,7 +184,7 @@ class _RootPageState extends State<RootPage> {
             .map((myclass) => Class.fromMap(myclass))
             .toList();
         String encodedClasses = json.encode(classes);
-        print("online-Classes : $encodedClasses");
+        // print("online-Classes : $encodedClasses");
         await prefs.setString('myClasses', encodedClasses);
         isDataFetched['myClasses'] = true;
       } else {
@@ -232,7 +232,7 @@ class _RootPageState extends State<RootPage> {
             .map((course) => Course.fromMap(course))
             .toList();
         String encodedMyCourses = json.encode(myCourses);
-        print("online-Courses : $encodedMyCourses");
+        // print("online-Courses : $encodedMyCourses");
         await prefs.setString('myCourses', encodedMyCourses);
         isDataFetched['myCourses'] = true;
       } else {
@@ -246,7 +246,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['myCourses'] = false;
       final encodedMyCourses = prefs.getString('myCourses');
       if (encodedMyCourses != null && encodedMyCourses != "") {
-        print("offline-Courses : $encodedMyCourses");
+        // print("offline-Courses : $encodedMyCourses");
         var decodedCourses = json.decode(encodedMyCourses);
         myCourses = (decodedCourses as List)
             .map((course) => Course.fromJson(course))
@@ -281,7 +281,7 @@ class _RootPageState extends State<RootPage> {
             .map((resource) => Resource.fromMap(resource))
             .toList();
         String encodedResources = json.encode(resources);
-        print("online-Resources : $encodedResources");
+        // print("online-Resources : $encodedResources");
         await prefs.setString('resources', encodedResources);
         isDataFetched['resources'] = true;
       } else {
@@ -295,7 +295,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['resources'] = false;
       final encodedResources = prefs.getString('resources');
       if (encodedResources != null && encodedResources != "") {
-        print("offline-Resources : $encodedResources");
+        // print("offline-Resources : $encodedResources");
         var decodedResources = json.decode(encodedResources);
         resources = (decodedResources as List)
             .map((resource) => Resource.fromJson(resource))
@@ -329,7 +329,7 @@ class _RootPageState extends State<RootPage> {
             .map((myMap) => Customer.fromMap(myMap))
             .toList();
         String encodedStudents = json.encode(students);
-        print("online-Students/$courseID : $encodedStudents");
+        // print("online-Students/$courseID : $encodedStudents");
         await prefs.setString('students/$courseID', encodedStudents);
         isDataFetched['students/$courseID'] = true;
       } else {
@@ -343,7 +343,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['students/$courseID'] = false;
       final encodedStudents = prefs.getString('students/$courseID');
       if (encodedStudents != null && encodedStudents != "") {
-        print("offline-Students/$courseID : $encodedStudents");
+        // print("offline-Students/$courseID : $encodedStudents");
         var decodedStudents = json.decode(encodedStudents);
         students = (decodedStudents as List)
             .map((student) => Customer.fromJson(student))
@@ -375,7 +375,7 @@ class _RootPageState extends State<RootPage> {
       if (soaRes.statusCode == 200) {
         soas = (jsonSoas as List).map((myMap) => SOA.fromMap(myMap)).toList();
         String encodedSoas = json.encode(soas);
-        print("online-Soas : $encodedSoas");
+        // print("online-Soas : $encodedSoas");
         await prefs.setString('soas', encodedSoas);
         isDataFetched['soas'] = true;
       } else {
@@ -389,7 +389,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['soas'] = false;
       final encodedSoas = prefs.getString('soas');
       if (encodedSoas != null && encodedSoas != "") {
-        print("offline-Soas : $encodedSoas");
+        // print("offline-Soas : $encodedSoas");
         var decodedSoas = json.decode(encodedSoas);
         soas = (decodedSoas as List).map((soa) => SOA.fromJson(soa)).toList();
       }
@@ -419,7 +419,7 @@ class _RootPageState extends State<RootPage> {
             .map((myMap) => Country.fromMap(myMap))
             .toList();
         String encodedCountries = json.encode(countries);
-        print("online-Countries : $encodedCountries");
+        // print("online-Countries : $encodedCountries");
         await prefs.setString('countries', encodedCountries);
         isDataFetched['countries'] = true;
       } else {
@@ -433,7 +433,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['countries'] = false;
       final encodedCountries = prefs.getString('countries');
       if (encodedCountries != null && encodedCountries != "") {
-        print("offline-Countries : $encodedCountries");
+        // print("offline-Countries : $encodedCountries");
         var decodedCountries = json.decode(encodedCountries);
         countries = (decodedCountries as List)
             .map((country) => Country.fromJson(country))
@@ -529,7 +529,7 @@ class _RootPageState extends State<RootPage> {
       "sessionDeliveryStatusID": 6,
       "sessionUpdatedBy": sessionUpdatedBy,
     };
-    print(body);
+    // print(body);
     SharedPreferences prefs = await SharedPreferences.getInstance();
     dynamic token = prefs.getString("jwt");
     final res = await http.put(
@@ -1772,8 +1772,8 @@ class _RootPageState extends State<RootPage> {
                           ...List.generate(
                             classes.length,
                             (index) => RecordedClassListItem(
-                              sessionWebLink:
-                                  classes[index].sessionWebLink ?? "",
+                              sessionRecodingWebLink: "https://teams.microsoft.com/l/meetup-join/19:517d7d0e2fe6493b92492bbe1e422b3b@thread.tacv2/1666172375420?context=%7B%22Tid%22:%22596ae5cb-cb16-40dd-916b-c06b6605c4b3%22,%22Oid%22:%22e263eee8-3aee-4ce3-a01d-f9d10eddf388%22%7D",
+                                  // classes[index].sessionRecodingWebLink ?? "",
                               classStartDate: classes[index].sessionDateTime ??
                                   DateTime.now().toString(),
                               recordDuration:

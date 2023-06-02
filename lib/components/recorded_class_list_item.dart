@@ -7,7 +7,7 @@ import 'package:rnt_app/utils/utils.dart';
 class RecordedClassListItem extends StatefulWidget {
   const RecordedClassListItem({ 
     super.key, 
-    this.sessionWebLink,
+    this.sessionRecodingWebLink,
     this.classStartDate,
     this.recordDuration,
     this.labelColor,
@@ -16,7 +16,7 @@ class RecordedClassListItem extends StatefulWidget {
     this.svgIcon,
   });
 
-  final String? sessionWebLink;
+  final String? sessionRecodingWebLink;
   final String? classStartDate;
   final int? recordDuration;
   final Color? labelColor;
@@ -30,10 +30,8 @@ class RecordedClassListItem extends StatefulWidget {
 
 class _RecordedClassListItemState extends State<RecordedClassListItem> {
 
-  final String _errorImage =
-      "https://i.ytimg.com/vi/z8wrRRR7_qU/maxresdefault.jpg";
-
   void _getMetadata(String url) async {
+    print(url);
     bool _isValid = _getUrlValid(url);
     if (_isValid) {
       Metadata? _metadata = await AnyLinkPreview.getMetadata(
@@ -61,6 +59,7 @@ class _RecordedClassListItemState extends State<RecordedClassListItem> {
   @override
   void initState() {
     super.initState();
+    _getMetadata(widget.sessionRecodingWebLink!);
   }
 
   @override
@@ -76,7 +75,7 @@ class _RecordedClassListItemState extends State<RecordedClassListItem> {
               width: 170,
               height: 110,
               child: AnyLinkPreview(
-                link: widget.sessionWebLink ?? "",
+                link: widget.sessionRecodingWebLink ?? "",
                 displayDirection: UIDirection.uiDirectionHorizontal,
                 showMultimedia: true,
                 borderRadius: 0.0,

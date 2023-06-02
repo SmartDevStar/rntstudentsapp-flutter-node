@@ -34,8 +34,8 @@ class _LoginPageState extends State<LoginPage> {
   Future<bool> _checkAuth() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (prefs.containsKey('jwt')) {
-      Navigator.push(
-        context, MaterialPageRoute(builder: (context) => const RootPage()));
+      // Navigator.push(
+      //   context, MaterialPageRoute(builder: (context) => const RootPage()));
       setState(() {
         isAuthed = true;
       });
@@ -129,7 +129,9 @@ class _LoginPageState extends State<LoginPage> {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: convertHexToColor(_themes[0].bgColor!),
-      body: ListView(children: [
+      body: isAuthed
+      ? const RootPage()
+      : ListView(children: [
         Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
