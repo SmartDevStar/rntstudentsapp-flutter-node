@@ -702,6 +702,29 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  String extractTeamsUrl(String url) {
+    RegExp regex = RegExp(r"/l/meetup-join/(\d+):(\w+)@thread\.\w+/\d+\?context=");
+    Match? match = regex.firstMatch(url);
+    if (match != null) {
+      String teamId = match.group(1)!;
+      String conversationId = match.group(2)!;
+      String languageCode = 'en-us'; // Default language is English
+      if (url.contains('sl=')) {
+        RegExp languageRegex = RegExp(r"sl=([a-z]{2}-[a-z]{2})");
+        Match? languageMatch = languageRegex.firstMatch(url);
+        if (languageMatch != null) {
+          languageCode = languageMatch.group(1)!;
+        }
+      }
+      String teamsUrl = 'msteams://teams/$teamId/meetup-join/$conversationId?sl=$languageCode';
+      print(teamsUrl);
+      return teamsUrl;
+    } else {
+      print('Invalid Microsoft Teams URL');
+      return '';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1817,8 +1840,10 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildRecordedClassesPage() {
-    List<Class> classes =
+    List<Class> courseClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
+    List<Class> recordedClasses =
+          courseClasses.where((item) => item.sessionRecodingWebLink != null && item.sessionRecodingWebLink != "").toList();
     return Column(
       children: [
         LastNotificationSection(
@@ -1842,17 +1867,17 @@ class _RootPageState extends State<RootPage> {
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
                 ? const LoadingView()
-                : classes.isNotEmpty
+                : recordedClasses.isNotEmpty
                     ? Column(
                         children: [
                           ...List.generate(
-                            classes.length,
+                            recordedClasses.length,
                             (index) => SingleChildScrollView(
                               scrollDirection: Axis.vertical,
                               child: SubPageListItem(
                                 subListType: SubPageListType.recordedClasses,
                                 recordClassScreen: "assets/images/record_class.png",
-                                recordDuration: classes[index].sessionDuration,
+                                recordDuration: recordedClasses[index].sessionDuration,
                                 icon: Icons.camera,
                                 svgIcon: "assets/images/record.svg",
                                 labelColor:
@@ -1860,7 +1885,7 @@ class _RootPageState extends State<RootPage> {
                                 dataColor: convertHexToColor(_themes[0].datafontColor!),
                                 onLinkRecordClass: () async {
                                   final uri =
-                                      Uri.parse(classes[index].sessionRecodingWebLink!);
+                                      Uri.parse(recordedClasses[index].sessionRecodingWebLink!);
                                   if (await canLaunchUrl(uri)) {
                                     await launchUrl(uri);
                                   } else {
@@ -2524,12 +2549,24 @@ class _RootPageState extends State<RootPage> {
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
           child: ElevatedButton(
             onPressed: () async {
-              final uri = Uri.parse(_activeClass.sessionWebLink!);
-              // final uri = Uri.parse("https://time.is/United_Arab_Emirates");
+              final uri = Uri.parse(extractTeamsUrl(_activeClass.sessionWebLink!));
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri);
               } else {
-                throw 'Could not launch';
+                final uri = Uri.parse("https://www.microsoft.com/en-us/microsoft-teams/download-app");
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text(
+                      "Could not link..",
+                      style: TextStyle(
+                        color: Colors.red,
+                      ),
+                    ),
+                  ));
+                }
               }
             },
             style: ElevatedButton.styleFrom(
