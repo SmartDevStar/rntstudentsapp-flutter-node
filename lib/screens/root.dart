@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:mime/mime.dart';
+// import 'package:mime/mime.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -32,7 +32,7 @@ import 'package:rnt_app/widgets/bottombar_item.dart';
 import 'package:rnt_app/components/last_notification_section.dart';
 import 'package:rnt_app/components/sub_page_header_section.dart';
 import 'package:rnt_app/components/sub_page_list_item.dart';
-import 'package:rnt_app/components/recorded_class_list_item.dart';
+// import 'package:rnt_app/components/recorded_class_list_item.dart';
 
 import 'package:rnt_app/screens/login.dart';
 
@@ -632,39 +632,40 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<File?> pickImage(ImageSource source) async {
+  Future<String?> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
-      return File(pickedFile.path);
+      return pickedFile.path;
     } else {
       return null;
     }
   }
 
-  void _handleAvatarUploadButtonPressed() async {
+  Future<void> _handleAvatarUploadButtonPressed() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     dynamic token = prefs.getString("jwt");
     int customerID = stMyCustomerInfo.customerID!;
     String url = "$serverDomain/api/customers/upload/$customerID";
     
-    final imageFile = await pickImage(ImageSource.gallery);
+    final imageFilePath = await pickImage(ImageSource.gallery);
 
     var uploadRequest = http.MultipartRequest(
       'POST',
       Uri.parse(url),
     );
 
-    if (imageFile == null) {
+    if (imageFilePath == null) {
       return;
     }
-    
-    // Add image file to request
+    String fileExt = imageFilePath.split('.').last;
+    String mimeType = mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
+
     uploadRequest.files.add(
       await http.MultipartFile.fromPath(
         'file', 
-        imageFile.path,
-        contentType: MediaType.parse(lookupMimeType(imageFile.path)!),
+        imageFilePath,
+        contentType: MediaType.parse(mimeType),
       ),
     );
 
@@ -676,7 +677,7 @@ class _RootPageState extends State<RootPage> {
 
     if (response.statusCode == 200) {
       setState(() {
-        _avatarImage = imageFile;
+        _avatarImage = File(imageFilePath);
       });
       fetchMyCustomerInfo();
 
@@ -700,7 +701,6 @@ class _RootPageState extends State<RootPage> {
       ));
     }
   }
-
 
   @override
   void initState() {
@@ -1847,19 +1847,27 @@ class _RootPageState extends State<RootPage> {
                         children: [
                           ...List.generate(
                             classes.length,
-                            (index) => RecordedClassListItem(
-                              sessionRecodingWebLink:"https://teams.microsoft.com/_#/pre-join-calling/19:13fd9387cedb4397a1a2a4e734bcd5d4@thread.tacv2", 
-                                  // classes[index].sessionRecodingWebLink ?? "",
-                              classStartDate: classes[index].sessionDateTime ??
-                                  DateTime.now().toString(),
-                              recordDuration:
-                                  classes[index].sessionDuration ?? 180,
-                              icon: Icons.camera,
-                              svgIcon: "assets/images/record.svg",
-                              labelColor:
-                                  convertHexToColor(_themes[0].labelFontColor!),
-                              dataColor:
-                                  convertHexToColor(_themes[0].datafontColor!),
+                            (index) => SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: SubPageListItem(
+                                subListType: SubPageListType.recordedClasses,
+                                recordClassScreen: "assets/images/record_class.png",
+                                recordDuration: classes[index].sessionDuration,
+                                icon: Icons.camera,
+                                svgIcon: "assets/images/record.svg",
+                                labelColor:
+                                    convertHexToColor(_themes[0].labelFontColor!),
+                                dataColor: convertHexToColor(_themes[0].datafontColor!),
+                                onLinkRecordClass: () async {
+                                  final uri =
+                                      Uri.parse(classes[index].sessionRecodingWebLink!);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri);
+                                  } else {
+                                    throw 'Could not launch';
+                                  }
+                                },
+                              ),
                             ),
                           ),
                         ],
