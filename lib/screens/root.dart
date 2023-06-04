@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-// import 'package:mime/mime.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -48,6 +47,7 @@ class _RootPageState extends State<RootPage> {
   int _activePageIdx = 0;
   Map<String, bool> isDataFetched = {};
   Map<String, bool> isDataLoading = {
+    'appTheme': false,
     'myCusInfo': false,
     'myClasses': false,
     'myCourses': false,
@@ -111,6 +111,54 @@ class _RootPageState extends State<RootPage> {
     }
 
     setState(() {
+      _themes = themes;
+    });
+  }
+
+  Future<void> fetchAppTheme() async {
+    setState(() {
+      isDataLoading['appTheme'] = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    bool isError = false;
+    List<MyTheme> themes = defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$serverDomain/api/setting/all'),
+      );
+
+      if (response.statusCode == 200) {
+        var jsonThemeData = json.decode(response.body)[0];
+        themes = (jsonThemeData as List)
+            .map((myMap) => MyTheme.fromMap(myMap))
+            .toList();
+        String encodedAppTheme = json.encode(themes);
+        // print("online-AppTheme : $encodedAppTheme");
+        await prefs.setString('appTheme', encodedAppTheme);
+        isDataFetched['appTheme'] = true;
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+        isError = true;
+    }
+
+    if (isError) {
+      isDataFetched['appTheme'] = false;
+      final encodedAppTheme = prefs.getString('appTheme');
+      if (encodedAppTheme != null && encodedAppTheme != "") {
+        print("offline-AppTheme : $encodedAppTheme");
+        var decodedAppTheme = json.decode(encodedAppTheme);
+        themes = (decodedAppTheme as List)
+            .map((item) => MyTheme.fromJson(item))
+            .toList();
+      }
+    }
+
+    setState(() {
+      isDataLoading['appTheme'] = false;
       _themes = themes;
     });
   }
@@ -607,7 +655,7 @@ class _RootPageState extends State<RootPage> {
 
   Future<void> _logOut() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.remove('jwt');
+    await prefs.clear();
     Navigator.push(
         context, MaterialPageRoute(builder: (context) => const LoginPage()));
   }
@@ -618,6 +666,7 @@ class _RootPageState extends State<RootPage> {
     });
     Future.delayed(const Duration(seconds: 1), () async {
       await Future.wait([
+        fetchAppTheme(),
         fetchMyCustomerInfo(),
         fetchCountries(),
         fetchClasses(),
@@ -647,7 +696,7 @@ class _RootPageState extends State<RootPage> {
     dynamic token = prefs.getString("jwt");
     int customerID = stMyCustomerInfo.customerID!;
     String url = "$serverDomain/api/customers/upload/$customerID";
-    
+
     final imageFilePath = await pickImage(ImageSource.gallery);
 
     var uploadRequest = http.MultipartRequest(
@@ -659,11 +708,12 @@ class _RootPageState extends State<RootPage> {
       return;
     }
     String fileExt = imageFilePath.split('.').last;
-    String mimeType = mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
+    String mimeType =
+        mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
 
     uploadRequest.files.add(
       await http.MultipartFile.fromPath(
-        'file', 
+        'file',
         imageFilePath,
         contentType: MediaType.parse(mimeType),
       ),
@@ -699,29 +749,6 @@ class _RootPageState extends State<RootPage> {
           style: TextStyle(color: Colors.red),
         ),
       ));
-    }
-  }
-
-  String extractTeamsUrl(String url) {
-    RegExp regex = RegExp(r"/l/meetup-join/(\d+):(\w+)@thread\.\w+/\d+\?context=");
-    Match? match = regex.firstMatch(url);
-    if (match != null) {
-      String teamId = match.group(1)!;
-      String conversationId = match.group(2)!;
-      String languageCode = 'en-us'; // Default language is English
-      if (url.contains('sl=')) {
-        RegExp languageRegex = RegExp(r"sl=([a-z]{2}-[a-z]{2})");
-        Match? languageMatch = languageRegex.firstMatch(url);
-        if (languageMatch != null) {
-          languageCode = languageMatch.group(1)!;
-        }
-      }
-      String teamsUrl = 'msteams://teams/$teamId/meetup-join/$conversationId?sl=$languageCode';
-      print(teamsUrl);
-      return teamsUrl;
-    } else {
-      print('Invalid Microsoft Teams URL');
-      return '';
     }
   }
 
@@ -866,7 +893,7 @@ class _RootPageState extends State<RootPage> {
                                 data: IconThemeData(
                                   color: convertHexToColor(
                                       _themes[2].labelFontColor!),
-                                  size: 21,
+                                  size: 50,
                                 ),
                                 child: const Icon(Icons.person))
                             : CircleAvatar(
@@ -1842,8 +1869,11 @@ class _RootPageState extends State<RootPage> {
   Widget _buildRecordedClassesPage() {
     List<Class> courseClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
-    List<Class> recordedClasses =
-          courseClasses.where((item) => item.sessionRecodingWebLink != null && item.sessionRecodingWebLink != "").toList();
+    List<Class> recordedClasses = courseClasses
+        .where((item) =>
+            item.sessionRecodingWebLink != null &&
+            item.sessionRecodingWebLink != "")
+        .toList();
     return Column(
       children: [
         LastNotificationSection(
@@ -1876,16 +1906,19 @@ class _RootPageState extends State<RootPage> {
                               scrollDirection: Axis.vertical,
                               child: SubPageListItem(
                                 subListType: SubPageListType.recordedClasses,
-                                recordClassScreen: "assets/images/record_class.png",
-                                recordDuration: recordedClasses[index].sessionDuration,
+                                recordClassScreen:
+                                    "assets/images/record_class.png",
+                                recordDuration:
+                                    recordedClasses[index].sessionDuration,
                                 icon: Icons.camera,
                                 svgIcon: "assets/images/record.svg",
-                                labelColor:
-                                    convertHexToColor(_themes[0].labelFontColor!),
-                                dataColor: convertHexToColor(_themes[0].datafontColor!),
+                                labelColor: convertHexToColor(
+                                    _themes[0].labelFontColor!),
+                                dataColor: convertHexToColor(
+                                    _themes[0].datafontColor!),
                                 onLinkRecordClass: () async {
-                                  final uri =
-                                      Uri.parse(recordedClasses[index].sessionRecodingWebLink!);
+                                  final uri = Uri.parse(recordedClasses[index]
+                                      .sessionRecodingWebLink!);
                                   if (await canLaunchUrl(uri)) {
                                     await launchUrl(uri);
                                   } else {
@@ -2549,24 +2582,21 @@ class _RootPageState extends State<RootPage> {
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
           child: ElevatedButton(
             onPressed: () async {
-              final uri = Uri.parse(extractTeamsUrl(_activeClass.sessionWebLink!));
+              String msteamsUrl =
+                  _activeClass.sessionWebLink!.replaceFirst("https", "msteams");
+              final uri = Uri.parse(msteamsUrl);
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri);
               } else {
-                final uri = Uri.parse("https://www.microsoft.com/en-us/microsoft-teams/download-app");
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri);
-                } else {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                      "Could not link..",
-                      style: TextStyle(
-                        color: Colors.red,
-                      ),
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text(
+                    "First install Microsoft Teams app..",
+                    style: TextStyle(
+                      color: Colors.red,
                     ),
-                  ));
-                }
+                  ),
+                ));
               }
             },
             style: ElevatedButton.styleFrom(

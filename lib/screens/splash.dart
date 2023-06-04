@@ -11,7 +11,6 @@ import 'package:rnt_app/utils/data.dart';
 
 import 'package:rnt_app/widgets/error_widget.dart';
 
-// import 'package:rnt_app/screens/root.dart';
 import 'package:rnt_app/screens/login.dart';
 
 class SplashPage extends StatefulWidget {
