@@ -73,6 +73,7 @@ class LastNotificationSection extends StatelessWidget {
               padding: const EdgeInsets.only(top: 0.0, bottom: 7.0),
               child: Text(
                 message,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
                   color: notificationColor,

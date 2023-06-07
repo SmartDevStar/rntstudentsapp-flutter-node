@@ -39,9 +39,9 @@ dependencies:
   shared_preferences: ^2.1.1
   flutter_svg: ^2.0.6
   intl: ^0.18.1
-  http: ^0.13.6
+  flutter_local_notifications: ^14.1.1
   url_launcher: ^6.1.11
-  remove: ^1.0.10
+  http: ^0.13.6
 
 dev_dependencies:
   flutter_test:
@@ -57,7 +57,7 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
-# The following section is specific to Flutter packages.
+# The following section is specific to Flutter packages.l
 flutter:
 
   # The following line ensures that the Material Icons font is

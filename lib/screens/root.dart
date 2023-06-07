@@ -31,9 +31,10 @@ import 'package:rnt_app/widgets/bottombar_item.dart';
 import 'package:rnt_app/components/last_notification_section.dart';
 import 'package:rnt_app/components/sub_page_header_section.dart';
 import 'package:rnt_app/components/sub_page_list_item.dart';
-// import 'package:rnt_app/components/recorded_class_list_item.dart';
 
 import 'package:rnt_app/screens/login.dart';
+
+import 'package:rnt_app/services/notification_services.dart';
 
 class RootPage extends StatefulWidget {
   const RootPage({Key? key}) : super(key: key);
@@ -43,6 +44,9 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
+  late final NotificationApi notificationApi;
+
+  Timer? timer;
   bool _isLoading = false;
   int _activePageIdx = 0;
   Map<String, bool> isDataFetched = {};
@@ -55,6 +59,7 @@ class _RootPageState extends State<RootPage> {
     'students': false,
     'soas': false,
     'countries': false,
+    'messages': false,
   };
   final List<int> _pageTrack = [];
 
@@ -73,7 +78,7 @@ class _RootPageState extends State<RootPage> {
   List<SOA> stSoas = [];
   List<Country> stCountries = [];
   Map<String, List<Customer>> stStudentsByCourseID = {};
-  final List<Message> _messageList = [];
+  List<Message> stMessages = [];
 
   DateTime? _sessionDateTime = DateTime.now();
   DateTime? _sessionStartingTime = DateTime.now();
@@ -95,24 +100,13 @@ class _RootPageState extends State<RootPage> {
   TextEditingController dateOfBirthController = TextEditingController();
   TextEditingController nationalCardIDNoController = TextEditingController();
   TextEditingController messageToUsController = TextEditingController();
+  TextEditingController messageToStudentsController = TextEditingController();
 
-  Future<void> _setMyTheme() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<MyTheme> themes = [];
-
-    final encodedThemeData = prefs.getString('appTheme');
-    if (encodedThemeData == null) {
-      themes = defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
-    } else {
-      var decodedThemeData = json.decode(encodedThemeData);
-      themes = (decodedThemeData as List)
-          .map((theme) => MyTheme.fromJson(theme))
-          .toList();
-    }
-
-    setState(() {
-      _themes = themes;
-    });
+  Future<void> fetchInitAppData() async {
+    await fetchMyCustomerInfo();
+    await fetchAppTheme();
+    await fetchCountries();
+    await fetchClasses();
   }
 
   Future<void> fetchAppTheme() async {
@@ -122,7 +116,8 @@ class _RootPageState extends State<RootPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     bool isError = false;
-    List<MyTheme> themes = defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
+    List<MyTheme> themes =
+        defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
 
     try {
       final response = await http.get(
@@ -142,7 +137,7 @@ class _RootPageState extends State<RootPage> {
         isError = true;
       }
     } catch (e) {
-        isError = true;
+      isError = true;
     }
 
     if (isError) {
@@ -382,6 +377,7 @@ class _RootPageState extends State<RootPage> {
         students = (jsonStudents as List)
             .map((myMap) => Customer.fromMap(myMap))
             .toList();
+        students = students.where((item) => item.customerID != stMyCustomerInfo.customerID).toList();
         String encodedStudents = json.encode(students);
         // print("online-Students/$courseID : $encodedStudents");
         await prefs.setString('students/$courseID', encodedStudents);
@@ -487,7 +483,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['countries'] = false;
       final encodedCountries = prefs.getString('countries');
       if (encodedCountries != null && encodedCountries != "") {
-        // print("offline-Countries : $encodedCountries");
+        print("offline-Countries : $encodedCountries");
         var decodedCountries = json.decode(encodedCountries);
         countries = (decodedCountries as List)
             .map((country) => Country.fromJson(country))
@@ -499,6 +495,74 @@ class _RootPageState extends State<RootPage> {
       isDataLoading['countries'] = false;
       stCountries = countries;
     });
+  }
+
+  Future<void> fetchMessages() async {
+    setState(() {
+      isDataLoading['messages'] = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("jwt");
+
+    bool isError = false;
+    List<Message> messages = [];
+    try {
+      final messageRes = await http.get(
+          Uri.parse('$serverDomain/api/customers/getmessages'),
+          headers: {'Authorization': 'Bearer $token'});
+
+      var jsonMessages = json.decode(messageRes.body)[0];
+      if (messageRes.statusCode == 200) {
+        messages = (jsonMessages as List)
+            .map((myMap) => Message.fromMap(myMap))
+            .toList();
+        String encodedMessages = json.encode(messages);
+        // print("online-Messages : $encodedMessages");
+        await prefs.setString('messages', encodedMessages);
+        isDataFetched['messages'] = true;
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      print(e);
+      isError = true;
+    }
+
+    if (isError) {
+      isDataFetched['messages'] = false;
+      final encodedMessages = prefs.getString('messages');
+      if (encodedMessages != null && encodedMessages != "") {
+        print("offline-Messages : $encodedMessages");
+        var decodedMessages = json.decode(encodedMessages);
+        messages = (decodedMessages as List)
+            .map((msg) => Message.fromJson(msg))
+            .toList();
+      }
+    }
+
+    messages.sort((a, b) => b.createDate.compareTo(a.createDate));
+    setState(() {
+      isDataLoading['messages'] = false;
+      stMessages = messages;
+    });
+
+    for (Message msg in messages) {
+      DateTime now = DateTime.now();
+      bool isExpired = now.isBefore(DateTime.parse(msg.expiryDate));
+
+      if (isExpired && msg.messageStatusID == 2 && msg.recieptStatusID == 1) {
+        Map<String, dynamic> data = {
+          "recipientID": msg.recipientID,
+          "recieptStatusID": 3,
+        };
+        updateMessageRecipientStatus(msg.messageID, data);
+        notificationApi.showNotification(
+          id: msg.messageID,
+          title: msg.subject,
+          body: msg.messageBody,
+        );
+      }
+    }
   }
 
   List<Class> getClassesByCourseID(List<Class> allClasses, int courseID) {
@@ -542,6 +606,12 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  List<Message> getChatMessages(List<Message> allMessages) {
+    List<Message> chatMessages =
+        allMessages.where((item) => item.isReminder == false).toList();
+    return chatMessages;
+  }
+
   Country getCountryByID(List<Country> allCounrtries, int nCountryID) {
     List<Country> countries = [];
     countries =
@@ -564,6 +634,17 @@ class _RootPageState extends State<RootPage> {
     } else {
       return Country();
     }
+  }
+
+  Message? getLastNotification(List<Message> allMessages) {
+    Message? lastNotification;
+    for (Message item in allMessages) {
+      if (item.isReminder == true) {
+        lastNotification = item;
+        break;
+      }
+    }
+    return lastNotification;
   }
 
   Future<void> addClass(
@@ -617,6 +698,88 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  Future<void> sendMessage(Map<String, dynamic> data, int target) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+
+    String url = "$serverDomain/api/customers/newmessage";
+    bool isError = false;
+
+    final response = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    print(response.body);
+    if (response.statusCode == 200) {
+      var jsonAddMsgRes = json.decode(response.body);
+      int messageID = jsonAddMsgRes["result"]["recordset"][0]["messageID"];
+      url = "$serverDomain/api/customers/addrecipient/$messageID";
+
+      if (target == 0) {
+        final res = await http.put(
+          Uri.parse(url),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({"recipientID": 5014, "recieptStatusID": 1}),
+        );
+        if (res.statusCode != 200) {
+          isError = true;
+        }
+      } else if (target == 1) {
+        int courseID = _activeCourse.courseID!;
+
+        print(courseID);
+        print(messageID);
+        for (Customer item in stStudentsByCourseID['students/$courseID'] ?? []) {
+          if (item.RegisterID != 0) {
+            final res = await http.put(
+              Uri.parse(url),
+              headers: <String, String>{
+                'Content-Type': 'application/json; charset=UTF-8',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({"recipientID": item.RegisterID, "recieptStatusID": 1}),
+            );
+            print(item.RegisterID);
+            if (res.statusCode != 200) {
+              isError = true;
+            }
+          }
+        }
+      }
+    } else {
+      isError = true;
+    }
+
+    if (!isError) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Successfully sent..",
+          style: TextStyle(
+            color: Colors.green,
+          ),
+        ),
+      ));
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Something went wrong..",
+          style: TextStyle(
+            color: Colors.red,
+          ),
+        ),
+      ));
+    }    
+  }
+
   Future<void> _updateCustomerInfo(
       int customerID, Map<String, dynamic> data) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -650,6 +813,27 @@ class _RootPageState extends State<RootPage> {
           style: TextStyle(color: Colors.red),
         ),
       ));
+    }
+  }
+
+  Future<void> updateMessageRecipientStatus(
+      int messageID, Map<String, dynamic> data) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+
+    String url = "$serverDomain/api/customers/updaterecipientstatus/$messageID";
+    final response = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      print("Successfully updated message recipient status");
+    } else {
+      print("Couldn't update message recipient status");
     }
   }
 
@@ -752,17 +936,39 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  void checkNextRightClass(List<Class> allClasses) {
+    DateTime now = DateTime.now();
+    int id = 100;
+
+    for (Class item in allClasses) {
+      DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
+      if (now.isBefore(scheduledDate)) {
+        int differenceInMinutes = scheduledDate.difference(now).inMinutes;
+        if (differenceInMinutes <= 15) {
+          notificationApi.showNotification(
+            id: id,
+            title: item.classTitle!,
+            body: "${item.classTitle} is coming in 15min!",
+          );
+          id++;
+        }
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _pageTrack.add(0);
 
-    _setMyTheme();
-    Future.wait([
-      fetchMyCustomerInfo(),
-      fetchClasses(),
-      fetchCountries(),
-    ]);
+    notificationApi = NotificationApi();
+    notificationApi.initApi();
+
+    timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      checkNextRightClass(stClasses);
+      fetchMessages();
+    });
+    fetchInitAppData();
   }
 
   @override
@@ -1113,15 +1319,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildHomePage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "صفحه اصلی",
           icon: Icons.home,
@@ -1342,15 +1550,18 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildContactUsPage() {
+    List<Message> chatMessages = getChatMessages(stMessages);
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "گفتگو با ما",
           icon: Icons.contact_mail,
@@ -1361,26 +1572,26 @@ class _RootPageState extends State<RootPage> {
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
-            child: Column(
-              children: [
-                ...List.generate(
-                  _messageList.length,
-                  (index) => SubPageListItem(
-                    subListType: SubPageListType.chatMessage,
-                    messageDate: _messageList[index].sentAt,
-                    messageContent: _messageList[index].message,
-                    // messageSender: _messageList[index].senderID ==
-                    //         _myCustomerInfo.registerID
-                    //     ? "شما"
-                    //     : _messageList[index].senderID == 5
-                    //         ? "مرکز"
-                    //         : "unknown",
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    dataColor: convertHexToColor(_themes[0].datafontColor!),
-                  ),
-                ),
-              ],
-            ),
+            child: chatMessages.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            chatMessages.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.chatMessage,
+                              messageDate: chatMessages[index].createDate,
+                              messageContent: chatMessages[index].messageBody,
+                              messageSender: chatMessages[index].recipientID == stMyCustomerInfo.registerID
+                              ? "us" : "you",
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          ),
+                        ],
+                      )
+                    : const NullDataView(),
           ),
         ),
         Row(
@@ -1430,7 +1641,19 @@ class _RootPageState extends State<RootPage> {
                 onPressed: () {
                   // signIn(usernameController.text, passwordController.text);
                   if (messageToUsController.text.isNotEmpty) {
-                    // _sendMessage(messageToUsController.text);
+                    Map<String, dynamic> data = {
+                      "createDate": DateTime.now().toString(),
+                      "subject": "New message from Client",
+                      "messageBody": messageToUsController.text,
+                      "parentMessageID": 0,
+                      "expiryDate": "2000-01-20T00:00:00Z",
+                      "isReminder": false,
+                      "messageStatusID": 2,
+                    };
+                    sendMessage(data, 0);
+                    setState(() {
+                      stMessages.add(Message.fromMap(data));
+                    });
                     messageToUsController.clear();
                   }
                 },
@@ -1477,98 +1700,47 @@ class _RootPageState extends State<RootPage> {
         ),
         Expanded(
           child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: Column(
-                children: [
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                ],
-              )),
+            scrollDirection: Axis.vertical,
+            child: isDataLoading['messages']!
+                ? const LoadingView()
+                : stMessages.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            stMessages.length,
+                            (index) => LastNotificationSection(
+                              message: stMessages[index].messageBody,
+                              receivedDate:
+                                  DateTime.parse(stMessages[index].createDate),
+                              bgColor: const Color(0xFF333F50),
+                              notificationColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              isLastMsg: false,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const NullDataView(),
+          ),
         ), // Main Page
       ],
     );
   }
 
   Widget _buildRefreshPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         Expanded(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Text(
@@ -1586,15 +1758,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildMyCoursesPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "درس های من",
           icon: Icons.book_rounded,
@@ -1640,15 +1814,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildCourseDetailPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.courseDetail,
           title: "اطلاعات درس",
@@ -1745,18 +1921,20 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildMyClassSchedulePage() {
+    Message? lastNotification = getLastNotification(stMessages);
     List<Class> myClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
     _activeClassID = myClasses.isNotEmpty ? myClasses[0].classID : -1;
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.myClassSchedule,
           title: _activeCourse.courseDescription,
@@ -1815,16 +1993,18 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildAllClassSchedulePage() {
+    Message? lastNotification = getLastNotification(stMessages);
     List<Class> classes = getClassesByCourseID(stClasses, -1);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "تمام کلاس ها",
@@ -1867,6 +2047,7 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildRecordedClassesPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     List<Class> courseClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
     List<Class> recordedClasses = courseClasses
@@ -1876,13 +2057,14 @@ class _RootPageState extends State<RootPage> {
         .toList();
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.studyResources,
           title: "کلاس های ضبط شده",
@@ -1940,15 +2122,17 @@ class _RootPageState extends State<RootPage> {
   Widget _buildStudyResourcesPage() {
     List<Resource> resources =
         getResourcesByCourseID(stResources, _activeCourse.courseID!);
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.studyResources,
           title: "منابع درسی",
@@ -1991,15 +2175,17 @@ class _RootPageState extends State<RootPage> {
 
   Widget _buildStudentsListPage() {
     int courseID = _activeCourse.courseID!;
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.studentsList,
           title: "اسامی دانشجویان",
@@ -2007,10 +2193,20 @@ class _RootPageState extends State<RootPage> {
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
           onClickSendMsgToALlStudents: () {
-            setState(() {
-              _activePageIdx = 15;
-              _pageTrack.add(15);
-            });
+            if (_activeClassID == -1 || stMyCustomerInfo.customerTypeID == 1) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text(
+                  "Sorry, not allowed for students..",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ));
+            } else {
+              setState(() {
+                _activePageIdx = 15;
+                _pageTrack.add(15);
+              });
+            }
           },
         ),
         Expanded(
@@ -2056,15 +2252,17 @@ class _RootPageState extends State<RootPage> {
 
   Widget _buildTodayClassesPage() {
     List<Class> classes = getClassesByCourseID(stClasses, -2);
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "کلاسهای امروز",
@@ -2116,15 +2314,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildFinancialStatementPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "صورت حساب مالی",
@@ -2206,15 +2406,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildAddNewClassPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.addClass,
           title: "کلاس جدید",
@@ -2544,15 +2746,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildJoinClassPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: _activeClass.classTitle,
@@ -2627,15 +2831,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildSendMsgToAllStudentsPage() {
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "ارسال اعلامیه به دانشجویان من",
@@ -2674,11 +2880,12 @@ class _RootPageState extends State<RootPage> {
                       children: [
                         Expanded(
                           child: TextField(
+                            controller: messageToStudentsController,
                             textAlign: TextAlign.left,
                             textAlignVertical: TextAlignVertical.bottom,
-                            maxLines: 2,
+                            maxLines: 3,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 16,
                               color: Colors.white,
                               fontFamily: 'Roboto',
                             ),
@@ -2722,10 +2929,25 @@ class _RootPageState extends State<RootPage> {
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
           child: ElevatedButton(
             onPressed: () {
-              setState(() {
-                _activePageIdx = 10;
-                _pageTrack.add(10);
-              });
+              DateTime now = DateTime.now();
+              DateTime tenDaysLater = now.add(Duration(days: 10));
+
+              if (messageToStudentsController.text.isNotEmpty) {
+                Map<String, dynamic> data = {
+                  "createDate": now.toString(),
+                  "subject": "New message from teacher",
+                  "messageBody": messageToStudentsController.text,
+                  "parentMessageID": 0,
+                  "expiryDate": tenDaysLater.toString(),
+                  "isReminder": true,
+                  "messageStatusID": 2,
+                };
+                sendMessage(data, 1);
+                setState(() {
+                  _activePageIdx = 10;
+                  _pageTrack.add(10);
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.all(0),
@@ -2761,15 +2983,17 @@ class _RootPageState extends State<RootPage> {
     if (_activeCountry != Country() && stCountries.contains(Country())) {
       stCountries.remove(Country());
     }
+    Message? lastNotification = getLastNotification(stMessages);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "اطلاعات شخصی",
           headerType: SubPageHeaderType.profile,
