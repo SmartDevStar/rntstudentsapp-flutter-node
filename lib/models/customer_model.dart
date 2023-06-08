@@ -28,6 +28,7 @@ class Customer {
   String? countryName;
   int? nationalityCountryID;
   int registerID;
+  int RegisterID;
   String? loginEmailAddress;
   bool? inActive;
   bool? onHold;
@@ -63,6 +64,7 @@ class Customer {
     this.inActive = false,
     this.onHold = false,
     this.registerID = 0,
+    this.RegisterID = 0,
     this.loginEmailAddress = "",
     this.profilePhotoWebAddress = "",
   });
@@ -98,6 +100,7 @@ class Customer {
       inActive: map['inActive'] ?? false,
       onHold: map['onHold'] ?? false,
       registerID: map['registerID'] ?? 0,
+      RegisterID: map['RegisterID'] ?? 0,
       loginEmailAddress: map['loginEmailAddress'] ?? "",
       profilePhotoWebAddress: map['profilePhotoWebAddress'] ?? "",
     );
@@ -134,6 +137,7 @@ class Customer {
       'inActive': inActive,
       'onHold': onHold,
       'registerID': registerID,
+      'RegisterID': RegisterID,
       'loginEmailAddress': loginEmailAddress,
       'profilePhotoWebAddress': profilePhotoWebAddress,
     };

@@ -60,7 +60,6 @@ class _RegisterPageState extends State<RegisterPage> {
     };
     var res = await http.Client().post(Uri.parse(url), body: body);
     if (res.statusCode == 200) {
-      print("Response status: ${res.statusCode}, Response body: ${res.body}");
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -71,7 +70,6 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => const LoginPage()));
     } else {
-      print("Response status: ${res.statusCode}, Response body: ${res.body}");
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -202,37 +200,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 borderSide: const BorderSide(color: Colors.red))),
       ),
     );
-    Widget codeSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
-      color: const Color(0xFF323F4F),
-      height: 57,
-      child: TextField(
-        // controller: usernameController,
-        textAlign: TextAlign.right,
-        textAlignVertical: TextAlignVertical.bottom,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-            fontSize: 18, color: convertHexToColor(_themes[1].datafontColor!)),
-        decoration: InputDecoration(
-            hintText: ':کد دانشجویی/کد استادی',
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: convertHexToColor(_themes[1].bgColor!),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red)),
-            focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red))),
-      ),
-    );
     Widget emailSection = Container(
       margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
       padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
@@ -262,82 +229,6 @@ class _RegisterPageState extends State<RegisterPage> {
             focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(0),
                 borderSide: const BorderSide(color: Colors.red))),
-      ),
-    );
-    Widget contactNoSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
-      color: const Color(0xFF323F4F),
-      height: 57,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              // controller: usernameController,
-              textAlign: TextAlign.right,
-              textAlignVertical: TextAlignVertical.bottom,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                  fontSize: 16,
-                  color: convertHexToColor(_themes[1].datafontColor!)),
-              decoration: InputDecoration(
-                  hintText: 'Country Code',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.white,
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red)),
-                  focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red))),
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              // controller: usernameController,
-              textAlign: TextAlign.right,
-              textAlignVertical: TextAlignVertical.bottom,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                  fontSize: 16,
-                  color: convertHexToColor(_themes[1].datafontColor!)),
-              decoration: InputDecoration(
-                  hintText: 'Number',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.white,
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red)),
-                  focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red))),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 5),
-            child: Text(
-              ":تلفن تماس",
-              style: TextStyle(
-                color: convertHexToColor(_themes[1].labelFontColor!),
-                fontSize: 18,
-              ),
-            ),
-          )
-        ],
       ),
     );
     Widget passwordSection = Container(

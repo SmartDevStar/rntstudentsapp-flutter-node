@@ -251,7 +251,7 @@ class SubPageHeaderSection extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(0),
                       child: Text(
-                        teacherName!,
+                        teacherName ?? "",
                         textAlign: TextAlign.right,
                         style: TextStyle(
                           fontSize: 16,
@@ -545,7 +545,7 @@ class SubPageHeaderSection extends StatelessWidget {
                         "assets/images/message.svg",
                         width: 50,
                         height: 50,
-                        colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(Colors.green, BlendMode.srcIn),
                       ),
                     ),
                   ),

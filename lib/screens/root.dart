@@ -1,11 +1,15 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:rnt_app/models/theme_model.dart';
 import 'package:rnt_app/models/customer_model.dart';
@@ -13,6 +17,7 @@ import 'package:rnt_app/models/course_model.dart';
 import 'package:rnt_app/models/class_model.dart';
 import 'package:rnt_app/models/resource_model.dart';
 import 'package:rnt_app/models/soa_model.dart';
+import 'package:rnt_app/models/country_model.dart';
 import 'package:rnt_app/models/message_model.dart';
 
 import 'package:rnt_app/utils/utils.dart';
@@ -29,6 +34,8 @@ import 'package:rnt_app/components/sub_page_list_item.dart';
 
 import 'package:rnt_app/screens/login.dart';
 
+import 'package:rnt_app/services/notification_services.dart';
+
 class RootPage extends StatefulWidget {
   const RootPage({Key? key}) : super(key: key);
 
@@ -37,21 +44,30 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
+  late final NotificationApi notificationApi;
+
+  Timer? timer;
   bool _isLoading = false;
   int _activePageIdx = 0;
   Map<String, bool> isDataFetched = {};
   Map<String, bool> isDataLoading = {
+    'appTheme': false,
     'myCusInfo': false,
     'myClasses': false,
     'myCourses': false,
     'resources': false,
     'students': false,
     'soas': false,
+    'countries': false,
+    'messages': false,
   };
   final List<int> _pageTrack = [];
 
   Course _activeCourse = Course();
   Class _activeClass = Class();
+  Country _activeCountry = Country();
+  int? _activeClassID;
+  File? _avatarImage;
 
   List<MyTheme> _themes = List.generate(
       defaultThemes.length, (index) => MyTheme.fromMap(defaultThemes[index]));
@@ -60,8 +76,9 @@ class _RootPageState extends State<RootPage> {
   List<Course> stCourses = [];
   List<Resource> stResources = [];
   List<SOA> stSoas = [];
+  List<Country> stCountries = [];
   Map<String, List<Customer>> stStudentsByCourseID = {};
-  final List<Message> _messageList = [];
+  List<Message> stMessages = [];
 
   DateTime? _sessionDateTime = DateTime.now();
   DateTime? _sessionStartingTime = DateTime.now();
@@ -73,10 +90,9 @@ class _RootPageState extends State<RootPage> {
   TextEditingController timeController = TextEditingController(
     text: DateFormat('HH:mm').format(DateTime.now()),
   );
-  TextEditingController durationController = TextEditingController(text: "90");
+  TextEditingController durationController = TextEditingController(text: "180");
   TextEditingController noteController = TextEditingController();
   TextEditingController emailController = TextEditingController();
-  TextEditingController countryCodeController = TextEditingController();
   TextEditingController contactNumberController = TextEditingController();
   TextEditingController residentCountryIDController = TextEditingController();
   TextEditingController passportNoController = TextEditingController();
@@ -84,22 +100,63 @@ class _RootPageState extends State<RootPage> {
   TextEditingController dateOfBirthController = TextEditingController();
   TextEditingController nationalCardIDNoController = TextEditingController();
   TextEditingController messageToUsController = TextEditingController();
+  TextEditingController messageToStudentsController = TextEditingController();
 
-  Future<void> _setMyTheme() async {
+  ScrollController _scrollController = ScrollController();
+
+  Future<void> fetchInitAppData() async {
+    await fetchMyCustomerInfo();
+    await fetchAppTheme();
+    await fetchMessages();
+    await fetchCountries();
+    await fetchClasses();
+  }
+
+  Future<void> fetchAppTheme() async {
+    setState(() {
+      isDataLoading['appTheme'] = true;
+    });
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<MyTheme> themes = [];
 
-    final encodedThemeData = prefs.getString('appTheme');
-    if (encodedThemeData == null) {
-      themes = defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
-    } else {
-      var decodedThemeData = json.decode(encodedThemeData);
-      themes = (decodedThemeData as List)
-          .map((theme) => MyTheme.fromJson(theme))
-          .toList();
+    bool isError = false;
+    List<MyTheme> themes =
+        defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$serverDomain/api/setting/all'),
+      );
+
+      if (response.statusCode == 200) {
+        var jsonThemeData = json.decode(response.body)[0];
+        themes = (jsonThemeData as List)
+            .map((myMap) => MyTheme.fromMap(myMap))
+            .toList();
+        String encodedAppTheme = json.encode(themes);
+        // print("online-AppTheme : $encodedAppTheme");
+        await prefs.setString('appTheme', encodedAppTheme);
+        isDataFetched['appTheme'] = true;
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      isError = true;
+    }
+
+    if (isError) {
+      isDataFetched['appTheme'] = false;
+      final encodedAppTheme = prefs.getString('appTheme');
+      if (encodedAppTheme != null && encodedAppTheme != "") {
+        print("offline-AppTheme : $encodedAppTheme");
+        var decodedAppTheme = json.decode(encodedAppTheme);
+        themes = (decodedAppTheme as List)
+            .map((item) => MyTheme.fromJson(item))
+            .toList();
+      }
     }
 
     setState(() {
+      isDataLoading['appTheme'] = false;
       _themes = themes;
     });
   }
@@ -122,7 +179,7 @@ class _RootPageState extends State<RootPage> {
         var jsonMyCusInfo = json.decode(myCusInfoRes.body)[0];
         String encodedMyCusInfo =
             json.encode(Customer.fromMap(jsonMyCusInfo[0]));
-        print("online-myCusInfo : $encodedMyCusInfo");
+        // print("online-myCusInfo : $encodedMyCusInfo");
         await prefs.setString('myCusInfo', encodedMyCusInfo);
         myCusInfo = Customer.fromMap(jsonMyCusInfo[0]);
 
@@ -138,11 +195,20 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['myCusInfo'] = false;
       final encodedMyCusInfo = prefs.getString('myCusInfo');
       if (encodedMyCusInfo != null && encodedMyCusInfo != "") {
-        print("offline-myCusInfo : $encodedMyCusInfo");
+        // print("offline-myCusInfo : $encodedMyCusInfo");
         var decodedMyCusInfo = json.decode(encodedMyCusInfo);
         myCusInfo = Customer.fromJson(decodedMyCusInfo);
       }
     }
+
+    emailController.text = myCusInfo.email ?? "";
+    contactNumberController.text = myCusInfo.contactNumber ?? "";
+    residentCountryIDController.text = myCusInfo.residentCountryID.toString();
+    passportNoController.text = myCusInfo.passportNo ?? "";
+    nationalIDNoController.text = myCusInfo.nationalIDNo ?? "";
+    dateOfBirthController.text =
+        DateFormat('dd-MM-yyyy').format(DateTime.parse(myCusInfo.dateOfBirth!));
+    nationalCardIDNoController.text = myCusInfo.nationalCardIDNo ?? "";
 
     setState(() {
       isDataLoading['myCusInfo'] = false;
@@ -170,7 +236,7 @@ class _RootPageState extends State<RootPage> {
             .map((myclass) => Class.fromMap(myclass))
             .toList();
         String encodedClasses = json.encode(classes);
-        print("online-Classes : $encodedClasses");
+        // print("online-Classes : $encodedClasses");
         await prefs.setString('myClasses', encodedClasses);
         isDataFetched['myClasses'] = true;
       } else {
@@ -218,7 +284,7 @@ class _RootPageState extends State<RootPage> {
             .map((course) => Course.fromMap(course))
             .toList();
         String encodedMyCourses = json.encode(myCourses);
-        print("online-Courses : $encodedMyCourses");
+        // print("online-Courses : $encodedMyCourses");
         await prefs.setString('myCourses', encodedMyCourses);
         isDataFetched['myCourses'] = true;
       } else {
@@ -232,7 +298,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['myCourses'] = false;
       final encodedMyCourses = prefs.getString('myCourses');
       if (encodedMyCourses != null && encodedMyCourses != "") {
-        print("offline-Courses : $encodedMyCourses");
+        // print("offline-Courses : $encodedMyCourses");
         var decodedCourses = json.decode(encodedMyCourses);
         myCourses = (decodedCourses as List)
             .map((course) => Course.fromJson(course))
@@ -267,7 +333,7 @@ class _RootPageState extends State<RootPage> {
             .map((resource) => Resource.fromMap(resource))
             .toList();
         String encodedResources = json.encode(resources);
-        print("online-Resources : $encodedResources");
+        // print("online-Resources : $encodedResources");
         await prefs.setString('resources', encodedResources);
         isDataFetched['resources'] = true;
       } else {
@@ -281,7 +347,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['resources'] = false;
       final encodedResources = prefs.getString('resources');
       if (encodedResources != null && encodedResources != "") {
-        print("offline-Resources : $encodedResources");
+        // print("offline-Resources : $encodedResources");
         var decodedResources = json.decode(encodedResources);
         resources = (decodedResources as List)
             .map((resource) => Resource.fromJson(resource))
@@ -314,8 +380,9 @@ class _RootPageState extends State<RootPage> {
         students = (jsonStudents as List)
             .map((myMap) => Customer.fromMap(myMap))
             .toList();
+        students = students.where((item) => item.customerID != stMyCustomerInfo.customerID).toList();
         String encodedStudents = json.encode(students);
-        print("online-Students/$courseID : $encodedStudents");
+        // print("online-Students/$courseID : $encodedStudents");
         await prefs.setString('students/$courseID', encodedStudents);
         isDataFetched['students/$courseID'] = true;
       } else {
@@ -329,7 +396,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['students/$courseID'] = false;
       final encodedStudents = prefs.getString('students/$courseID');
       if (encodedStudents != null && encodedStudents != "") {
-        print("offline-Students/$courseID : $encodedStudents");
+        // print("offline-Students/$courseID : $encodedStudents");
         var decodedStudents = json.decode(encodedStudents);
         students = (decodedStudents as List)
             .map((student) => Customer.fromJson(student))
@@ -361,7 +428,7 @@ class _RootPageState extends State<RootPage> {
       if (soaRes.statusCode == 200) {
         soas = (jsonSoas as List).map((myMap) => SOA.fromMap(myMap)).toList();
         String encodedSoas = json.encode(soas);
-        print("online-Soas : $encodedSoas");
+        // print("online-Soas : $encodedSoas");
         await prefs.setString('soas', encodedSoas);
         isDataFetched['soas'] = true;
       } else {
@@ -375,7 +442,7 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['soas'] = false;
       final encodedSoas = prefs.getString('soas');
       if (encodedSoas != null && encodedSoas != "") {
-        print("offline-Soas : $encodedSoas");
+        // print("offline-Soas : $encodedSoas");
         var decodedSoas = json.decode(encodedSoas);
         soas = (decodedSoas as List).map((soa) => SOA.fromJson(soa)).toList();
       }
@@ -385,6 +452,117 @@ class _RootPageState extends State<RootPage> {
       isDataLoading['soas'] = false;
       stSoas = soas;
     });
+  }
+
+  Future<void> fetchCountries() async {
+    setState(() {
+      isDataLoading['countries'] = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    bool isError = false;
+    List<Country> countries = [];
+    try {
+      final countryRes =
+          await http.get(Uri.parse('$serverDomain/api/setting/countries'));
+
+      var jsonCountries = json.decode(countryRes.body)[0];
+      if (countryRes.statusCode == 200) {
+        countries = (jsonCountries as List)
+            .map((myMap) => Country.fromMap(myMap))
+            .toList();
+        String encodedCountries = json.encode(countries);
+        // print("online-Countries : $encodedCountries");
+        await prefs.setString('countries', encodedCountries);
+        isDataFetched['countries'] = true;
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      isError = true;
+    }
+
+    if (isError) {
+      isDataFetched['countries'] = false;
+      final encodedCountries = prefs.getString('countries');
+      if (encodedCountries != null && encodedCountries != "") {
+        print("offline-Countries : $encodedCountries");
+        var decodedCountries = json.decode(encodedCountries);
+        countries = (decodedCountries as List)
+            .map((country) => Country.fromJson(country))
+            .toList();
+      }
+    }
+
+    setState(() {
+      isDataLoading['countries'] = false;
+      stCountries = countries;
+    });
+  }
+
+  Future<void> fetchMessages() async {
+    setState(() {
+      isDataLoading['messages'] = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("jwt");
+
+    bool isError = false;
+    List<Message> messages = [];
+    try {
+      final messageRes = await http.get(
+          Uri.parse('$serverDomain/api/customers/getmessages'),
+          headers: {'Authorization': 'Bearer $token'});
+
+      var jsonMessages = json.decode(messageRes.body)[0];
+      if (messageRes.statusCode == 200) {
+        messages = (jsonMessages as List)
+            .map((myMap) => Message.fromMap(myMap))
+            .toList();
+        String encodedMessages = json.encode(messages);
+        print("online-Messages : $encodedMessages");
+        await prefs.setString('messages', encodedMessages);
+        isDataFetched['messages'] = true;
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      print(e);
+      isError = true;
+    }
+
+    if (isError) {
+      isDataFetched['messages'] = false;
+      final encodedMessages = prefs.getString('messages');
+      if (encodedMessages != null && encodedMessages != "") {
+        print("offline-Messages : $encodedMessages");
+        var decodedMessages = json.decode(encodedMessages);
+        messages = (decodedMessages as List)
+            .map((msg) => Message.fromJson(msg))
+            .toList();
+      }
+    }
+
+    messages.sort((a, b) => b.createDate.compareTo(a.createDate));
+    setState(() {
+      isDataLoading['messages'] = false;
+      stMessages = messages;
+    });
+
+    for (Message msg in messages) {
+      if (msg.messageStatusID == 2 && msg.recieptStatusID == 1 && msg.recipientID == stMyCustomerInfo.registerID) {
+        Map<String, dynamic> data = {
+          "recipientID": msg.recipientID,
+          "recieptStatusID": 3,
+        };
+        updateMessageRecipientStatus(msg.messageID, data);
+        notificationApi.showNotification(
+          id: msg.messageID,
+          title: "<p style='text-align: center;'>${msg.subject}</p>",
+          body: "<p style='text-align: center;'>${msg.messageBody}</p>",
+        );
+      }
+    }
   }
 
   List<Class> getClassesByCourseID(List<Class> allClasses, int courseID) {
@@ -428,8 +606,65 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  List<Message> getChatMessages(List<Message> allMessages) {
+    List<Message> chatMessages =
+        allMessages.where((item) => item.isReminder == false).toList();
+    chatMessages.sort((a, b) => a.createDate.compareTo(b.createDate));
+    try{
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    } catch(e) {
+      print(e);
+    }
+    return chatMessages;
+  }
+
+  List<Message> getNotifications(List<Message> allMessages) {
+    List<Message> notifications =
+        allMessages.where((item) => item.isReminder == true && item.recipientID == stMyCustomerInfo.registerID).toList();
+    return notifications;
+  }
+
+  Country getCountryByID(List<Country> allCounrtries, int nCountryID) {
+    List<Country> countries = [];
+    countries =
+        allCounrtries.where((item) => item.countryID == nCountryID).toList();
+
+    if (countries.isNotEmpty) {
+      return countries[0];
+    } else {
+      return Country();
+    }
+  }
+
+  Country getCountryByName(List<Country> allCounrtries, String strCountryName) {
+    List<Country> countries = [];
+    countries = allCounrtries
+        .where((item) => item.countryName == strCountryName)
+        .toList();
+    if (countries.isNotEmpty) {
+      return countries[0];
+    } else {
+      return Country();
+    }
+  }
+
+  Message? getLastNotification(List<Message> allNotifications) {
+    Message? lastNotification;
+    for (Message item in allNotifications) {
+      if (item.isReminder == true) {
+        lastNotification = item;
+        break;
+      }
+    }
+    return lastNotification;
+  }
+
   Future<void> addClass(
-    int classID,
+    int? classID,
     String sessionDateTime,
     String sessionStartingTime,
     int sessionDuration,
@@ -437,7 +672,7 @@ class _RootPageState extends State<RootPage> {
   ) async {
     String url = "$serverDomain/api/courses/addclass";
     Map body = {
-      "classID": 1004,
+      "classID": _activeClassID ?? -1,
       "sessionDateTime": sessionDateTime,
       "sessionStartingTime": sessionStartingTime,
       "sessionDuration": sessionDuration,
@@ -445,6 +680,7 @@ class _RootPageState extends State<RootPage> {
       "sessionDeliveryStatusID": 6,
       "sessionUpdatedBy": sessionUpdatedBy,
     };
+    // print(body);
     SharedPreferences prefs = await SharedPreferences.getInstance();
     dynamic token = prefs.getString("jwt");
     final res = await http.put(
@@ -478,6 +714,88 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  Future<void> sendMessage(Map<String, dynamic> data, int target) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+
+    String url = "$serverDomain/api/customers/newmessage";
+    bool isError = false;
+
+    final response = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      var jsonAddMsgRes = json.decode(response.body);
+      int messageID = jsonAddMsgRes["result"]["recordset"][0]["messageID"];
+      url = "$serverDomain/api/customers/addrecipient/$messageID";
+
+      if (target == 0) {
+        final res = await http.put(
+          Uri.parse(url),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({"recipientID": 5014, "recieptStatusID": 1}),
+        );
+        fetchMessages();
+        if (res.statusCode != 200) {
+          isError = true;
+        }
+      } else if (target == 1) {
+        int courseID = _activeCourse.courseID!;
+
+        print(courseID);
+        print(messageID);
+        for (Customer item in stStudentsByCourseID['students/$courseID'] ?? []) {
+          if (item.RegisterID != 0) {
+            final res = await http.put(
+              Uri.parse(url),
+              headers: <String, String>{
+                'Content-Type': 'application/json; charset=UTF-8',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({"recipientID": item.RegisterID, "recieptStatusID": 1}),
+            );
+            print(item.RegisterID);
+            if (res.statusCode != 200) {
+              isError = true;
+            }
+          }
+        }
+      }
+    } else {
+      isError = true;
+    }
+
+    if (!isError) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Successfully sent..",
+          style: TextStyle(
+            color: Colors.green,
+          ),
+        ),
+      ));
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Something went wrong..",
+          style: TextStyle(
+            color: Colors.red,
+          ),
+        ),
+      ));
+    }    
+  }
+
   Future<void> _updateCustomerInfo(
       int customerID, Map<String, dynamic> data) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -492,7 +810,6 @@ class _RootPageState extends State<RootPage> {
       },
       body: jsonEncode(data),
     );
-
     if (response.statusCode == 200) {
       fetchMyCustomerInfo();
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -515,9 +832,56 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  Future<void> updateMessageRecipientStatus(
+      int messageID, Map<String, dynamic> data) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+
+    String url = "$serverDomain/api/customers/updaterecipientstatus/$messageID";
+    final response = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      print("Successfully updated message recipient status");
+    } else {
+      print("Couldn't update message recipient status");
+    }
+  }
+
+  Future<void> updateNotificationRecipientStatus(int newStatus) async {
+    List<Message> notifications = getNotifications(stMessages);
+    for (Message msg in notifications) {
+      if (msg.messageStatusID == 2 && msg.recieptStatusID != newStatus) {
+        Map<String, dynamic> data = {
+          "recipientID": msg.recipientID,
+          "recieptStatusID": newStatus,
+        };
+        updateMessageRecipientStatus(msg.messageID, data);
+      }
+    }
+  }
+
+  Future<void> updateChatMsgRecipientStatus(int newStatus) async {
+    List<Message> chatMessages = getChatMessages(stMessages);
+    for (Message msg in chatMessages) {
+      if (msg.messageStatusID == 2 && msg.recieptStatusID != newStatus && msg.recipientID == stMyCustomerInfo.registerID) {
+        Map<String, dynamic> data = {
+          "recipientID": msg.recipientID,
+          "recieptStatusID": newStatus,
+        };
+        updateMessageRecipientStatus(msg.messageID, data);
+      }
+    }
+  }
+
   Future<void> _logOut() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.remove('jwt');
+    await prefs.clear();
     Navigator.push(
         context, MaterialPageRoute(builder: (context) => const LoginPage()));
   }
@@ -528,7 +892,9 @@ class _RootPageState extends State<RootPage> {
     });
     Future.delayed(const Duration(seconds: 1), () async {
       await Future.wait([
+        fetchAppTheme(),
         fetchMyCustomerInfo(),
+        fetchCountries(),
         fetchClasses(),
         fetchCourses(),
         fetchResources(),
@@ -541,16 +907,123 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
+  Future<String?> pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile != null) {
+      return pickedFile.path;
+    } else {
+      return null;
+    }
+  }
+
+  Future<void> _handleAvatarUploadButtonPressed() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+    int customerID = stMyCustomerInfo.customerID!;
+    String url = "$serverDomain/api/customers/upload/$customerID";
+
+    final imageFilePath = await pickImage(ImageSource.gallery);
+
+    var uploadRequest = http.MultipartRequest(
+      'POST',
+      Uri.parse(url),
+    );
+
+    if (imageFilePath == null) {
+      return;
+    }
+    String fileExt = imageFilePath.split('.').last;
+    String mimeType =
+        mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
+
+    uploadRequest.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        imageFilePath,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+
+    uploadRequest.headers['Authorization'] = 'Bearer $token';
+    var response = await uploadRequest.send();
+
+    String encodedResponse = await response.stream.bytesToString();
+    Map<String, dynamic> decodedResonese = jsonDecode(encodedResponse);
+
+    if (response.statusCode == 200) {
+      setState(() {
+        _avatarImage = File(imageFilePath);
+      });
+      fetchMyCustomerInfo();
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Successfully uploaded..",
+          style: TextStyle(
+            color: Colors.green,
+          ),
+        ),
+      ));
+    } else {
+      print(decodedResonese);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Something's wrong...",
+          style: TextStyle(color: Colors.red),
+        ),
+      ));
+    }
+  }
+
+  void checkNextRightClass(List<Class> allClasses) {
+    DateTime now = DateTime.now();
+    int id = 100;
+
+    for (Class item in allClasses) {
+      DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
+      if (now.isBefore(scheduledDate)) {
+        int differenceInMinutes = scheduledDate.difference(now).inMinutes;
+        if (differenceInMinutes <= 15) {
+          notificationApi.showNotification(
+            id: id,
+            title: item.classTitle!,
+            body: "${item.classTitle} is coming in 15min!",
+          );
+          id++;
+        }
+      }
+    }
+  }
+
+  void onSelectNotification() {
+    setState(() {
+      _activePageIdx = 2;
+      _pageTrack.add(2);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _pageTrack.add(0);
 
-    _setMyTheme();
-    Future.wait([
-      fetchMyCustomerInfo(),
-      fetchClasses(),
-    ]);
+    notificationApi = NotificationApi(onSelectNotification: onSelectNotification);
+    notificationApi.initApi();
+
+    timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      checkNextRightClass(stClasses);
+      fetchMessages();
+    });
+    fetchInitAppData();
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -671,6 +1144,8 @@ class _RootPageState extends State<RootPage> {
                               setState(() {
                                 _activePageIdx = 16;
                                 _pageTrack.add(16);
+                                _activeCountry = getCountryByID(stCountries,
+                                    stMyCustomerInfo.residentCountryID ?? -1);
                               })
                             }
                         },
@@ -679,7 +1154,7 @@ class _RootPageState extends State<RootPage> {
                                 data: IconThemeData(
                                   color: convertHexToColor(
                                       _themes[2].labelFontColor!),
-                                  size: 21,
+                                  size: 50,
                                 ),
                                 child: const Icon(Icons.person))
                             : CircleAvatar(
@@ -884,14 +1359,20 @@ class _RootPageState extends State<RootPage> {
               color: convertHexToColor(_themes[4].labelFontColor!),
               activeColor: convertHexToColor(_themes[4].datafontColor!),
               onTap: () {
-            if (index == 3) {
-              _refreshPage();
-            } else {
-              setState(() {
-                _activePageIdx = index;
-                _pageTrack.add(index);
-              });
-            }
+                if (index == 3) {
+                  _refreshPage();
+                } else {
+                  if (index == 1) {
+                    updateChatMsgRecipientStatus(4);
+                  }
+                  if (index == 2) {
+                    updateNotificationRecipientStatus(4);
+                  }
+                  setState(() {
+                    _activePageIdx = index;
+                    _pageTrack.add(index);
+                  });
+                }
           }),
         ),
       ),
@@ -899,16 +1380,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildHomePage() {
-    List<Class> todayNextClasses = getClassesByCourseID(stClasses, -3);
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "صفحه اصلی",
           icon: Icons.home,
@@ -1042,23 +1524,6 @@ class _RootPageState extends State<RootPage> {
                                   ),
                                 ),
                               ),
-                              isDataLoading['myClasses']!
-                                ? const LoadingView()
-                                : Padding(
-                                padding: const EdgeInsets.only(top: 2.0),
-                                child: Text(
-                                  todayNextClasses.isNotEmpty
-                                      ? todayNextClasses[0].sessionDateTime!
-                                      : "No more next schedules for today",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontFamily: 'Roboto',
-                                    color: convertHexToColor(
-                                        _themes[0].datafontColor!),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -1146,15 +1611,18 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildContactUsPage() {
+    List<Message> chatMessages = getChatMessages(stMessages);
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "گفتگو با ما",
           icon: Icons.contact_mail,
@@ -1164,27 +1632,28 @@ class _RootPageState extends State<RootPage> {
         ),
         Expanded(
           child: SingleChildScrollView(
+            controller: _scrollController,
             scrollDirection: Axis.vertical,
-            child: Column(
-              children: [
-                ...List.generate(
-                  _messageList.length,
-                  (index) => SubPageListItem(
-                    subListType: SubPageListType.chatMessage,
-                    messageDate: _messageList[index].sentAt,
-                    messageContent: _messageList[index].message,
-                    // messageSender: _messageList[index].senderID ==
-                    //         _myCustomerInfo.registerID
-                    //     ? "شما"
-                    //     : _messageList[index].senderID == 5
-                    //         ? "مرکز"
-                    //         : "unknown",
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    dataColor: convertHexToColor(_themes[0].datafontColor!),
-                  ),
-                ),
-              ],
-            ),
+            child: chatMessages.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            chatMessages.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.chatMessage,
+                              messageDate: convertDateTimeFormat(chatMessages[index].createDate, ""),
+                              messageContent: chatMessages[index].messageBody,
+                              messageSender: chatMessages[index].recipientID == stMyCustomerInfo.registerID
+                              ? "مرکز" : "شما",
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          ),
+                        ],
+                      )
+                    : const NullDataView(),
           ),
         ),
         Row(
@@ -1234,7 +1703,16 @@ class _RootPageState extends State<RootPage> {
                 onPressed: () {
                   // signIn(usernameController.text, passwordController.text);
                   if (messageToUsController.text.isNotEmpty) {
-                    // _sendMessage(messageToUsController.text);
+                    Map<String, dynamic> data = {
+                      "createDate": DateTime.now().toString(),
+                      "subject": "New message from Client",
+                      "messageBody": messageToUsController.text,
+                      "parentMessageID": 0,
+                      "expiryDate": "2000-01-20T00:00:00Z",
+                      "isReminder": false,
+                      "messageStatusID": 2,
+                    };
+                    sendMessage(data, 0);
                     messageToUsController.clear();
                   }
                 },
@@ -1270,10 +1748,11 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildNotificationPage() {
+    List<Message> notifications = getNotifications(stMessages);
     return Column(
       children: [
         SubPageHeaderSection(
-          title: "علان ها",
+          title: "اعلان ها",
           icon: Icons.notifications,
           isRotate: true,
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
@@ -1281,98 +1760,47 @@ class _RootPageState extends State<RootPage> {
         ),
         Expanded(
           child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: Column(
-                children: [
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                  LastNotificationSection(
-                    message: "تا پایان 21 جون مهلت تسویه حساب",
-                    receivedDate: DateTime(2022, 4, 25, 15, 30),
-                    bgColor: const Color(0xFF333F50),
-                    notificationColor:
-                        convertHexToColor(_themes[0].datafontColor!),
-                    labelColor: convertHexToColor(_themes[0].labelFontColor!),
-                    isLastMsg: false,
-                  ),
-                ],
-              )),
+            scrollDirection: Axis.vertical,
+            child: isDataLoading['messages']!
+                ? const LoadingView()
+                : notifications.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            notifications.length,
+                            (index) => LastNotificationSection(
+                              message: notifications[index].messageBody,
+                              receivedDate:
+                                  DateTime.parse(notifications[index].createDate),
+                              bgColor: const Color(0xFF333F50),
+                              notificationColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              isLastMsg: false,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const NullDataView(),
+          ),
         ), // Main Page
       ],
     );
   }
 
   Widget _buildRefreshPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         Expanded(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Text(
@@ -1390,15 +1818,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildMyCoursesPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "درس های من",
           icon: Icons.book_rounded,
@@ -1410,33 +1840,33 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myCourses']!
-            ? const LoadingView()
-            : stCourses.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        stCourses.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.myCourses,
-                          courseName: stCourses[index].courseDescription,
-                          icon: Icons.book,
-                          svgIcon: "assets/images/rescources.svg",
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                          onTap: () {
-                            setState(() {
-                              _activeCourse = stCourses[index];
-                              _activePageIdx = 5;
-                              _pageTrack.add(5);
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  )
-                : const NullDataView(),
+                ? const LoadingView()
+                : stCourses.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            stCourses.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.myCourses,
+                              courseName: stCourses[index].courseDescription,
+                              icon: Icons.book,
+                              svgIcon: "assets/images/rescources.svg",
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                              onTap: () {
+                                setState(() {
+                                  _activeCourse = stCourses[index];
+                                  _activePageIdx = 5;
+                                  _pageTrack.add(5);
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1444,15 +1874,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildCourseDetailPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.courseDetail,
           title: "اطلاعات درس",
@@ -1549,17 +1981,20 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildMyClassSchedulePage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     List<Class> myClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
+    _activeClassID = myClasses.isNotEmpty ? myClasses[0].classID : -1;
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.myClassSchedule,
           title: _activeCourse.courseDescription,
@@ -1567,40 +2002,50 @@ class _RootPageState extends State<RootPage> {
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
           onAddClass: () {
-            setState(() {
-              _activePageIdx = 13;
-              _pageTrack.add(13);
-            });
+            if (_activeClassID == -1 || stMyCustomerInfo.customerTypeID == 1) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text(
+                  "Couldn't create a new class",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ));
+            } else {
+              setState(() {
+                _activePageIdx = 13;
+                _pageTrack.add(13);
+              });
+            }
           },
         ),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : myClasses.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        myClasses.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.classSchedule,
-                          title: myClasses[index].classTitle,
-                          classStartDate: myClasses[index].sessionDateTime,
-                          classStateId:
-                              myClasses[index].sessionDeliveryStatusID,
-                          classStateDescription:
-                              myClasses[index].sessionStatusDescription,
-                          icon: Icons.calendar_month,
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : myClasses.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            myClasses.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.classSchedule,
+                              title: myClasses[index].classTitle,
+                              classStartDate: myClasses[index].sessionDateTime,
+                              classStateId:
+                                  myClasses[index].sessionDeliveryStatusID,
+                              classStateDescription:
+                                  myClasses[index].sessionStatusDescription,
+                              icon: Icons.calendar_month,
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1608,16 +2053,18 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildAllClassSchedulePage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     List<Class> classes = getClassesByCourseID(stClasses, -1);
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "تمام کلاس ها",
@@ -1629,29 +2076,30 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : classes.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        classes.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.classSchedule,
-                          title: classes[index].classTitle,
-                          classStartDate: classes[index].sessionDateTime,
-                          classStateId: classes[index].sessionDeliveryStatusID,
-                          classStateDescription:
-                              classes[index].sessionStatusDescription,
-                          icon: Icons.calendar_month,
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : classes.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            classes.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.classSchedule,
+                              title: classes[index].classTitle,
+                              classStartDate: classes[index].sessionDateTime,
+                              classStateId:
+                                  classes[index].sessionDeliveryStatusID,
+                              classStateDescription:
+                                  classes[index].sessionStatusDescription,
+                              icon: Icons.calendar_month,
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1659,17 +2107,24 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildRecordedClassesPage() {
-    List<Class> classes =
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    List<Class> courseClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
+    List<Class> recordedClasses = courseClasses
+        .where((item) =>
+            item.sessionRecodingWebLink != null &&
+            item.sessionRecodingWebLink != "")
+        .toList();
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.studyResources,
           title: "کلاس های ضبط شده",
@@ -1683,39 +2138,41 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : classes.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        classes.length,
-                        (index) => SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: SubPageListItem(
-                            subListType: SubPageListType.recordedClasses,
-                            recordClassScreen: "assets/images/record_class.png",
-                            recordDuration: classes[index].sessionDuration,
-                            icon: Icons.camera,
-                            svgIcon: "assets/images/record.svg",
-                            labelColor:
-                                convertHexToColor(_themes[0].labelFontColor!),
-                            dataColor:
-                                convertHexToColor(_themes[0].datafontColor!),
-                            onLinkRecordClass: () async {
-                              final uri = Uri.parse(
-                                  classes[index].sessionRecodingWebLink!);
-                              if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri);
-                              } else {
-                                throw 'Could not launch';
-                              }
-                            },
+                ? const LoadingView()
+                : recordedClasses.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            recordedClasses.length,
+                            (index) => SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: SubPageListItem(
+                                subListType: SubPageListType.recordedClasses,
+                                recordClassScreen:
+                                    "assets/images/record_class.png",
+                                recordDuration:
+                                    recordedClasses[index].sessionDuration,
+                                icon: Icons.camera,
+                                svgIcon: "assets/images/record.svg",
+                                labelColor: convertHexToColor(
+                                    _themes[0].labelFontColor!),
+                                dataColor: convertHexToColor(
+                                    _themes[0].datafontColor!),
+                                onLinkRecordClass: () async {
+                                  final uri = Uri.parse(recordedClasses[index]
+                                      .sessionRecodingWebLink!);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri);
+                                  } else {
+                                    throw 'Could not launch';
+                                  }
+                                },
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1725,15 +2182,17 @@ class _RootPageState extends State<RootPage> {
   Widget _buildStudyResourcesPage() {
     List<Resource> resources =
         getResourcesByCourseID(stResources, _activeCourse.courseID!);
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.studyResources,
           title: "منابع درسی",
@@ -1747,81 +2206,18 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['resources']!
-            ? const LoadingView()
-            : resources.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        resources.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.studyResources,
-                          title: resources[index].resourceDescription,
-                          publisher: resources[index].resourcePublisher,
-                          icon: Icons.book,
-                          svgIcon: "assets/images/rescources.svg",
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
-                      )
-                    ],
-                  )
-                : const NullDataView(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStudentsListPage() {
-    int courseID = _activeCourse.courseID!;
-    return Column(
-      children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
-        SubPageHeaderSection(
-          headerType: SubPageHeaderType.studentsList,
-          title: "اسامی دانشجویان",
-          icon: Icons.person,
-          labelColor: convertHexToColor(_themes[0].labelFontColor!),
-          dataColor: convertHexToColor(_themes[0].datafontColor!),
-          onClickSendMsgToALlStudents: () {
-            setState(() {
-              _activePageIdx = 15;
-              _pageTrack.add(15);
-            });
-          },
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: isDataLoading['students']!
-            ? const LoadingView()
-            : stStudentsByCourseID.containsKey('students/$courseID')
-                ? stStudentsByCourseID['students/$courseID']!.isNotEmpty
+                ? const LoadingView()
+                : resources.isNotEmpty
                     ? Column(
                         children: [
                           ...List.generate(
-                            stStudentsByCourseID['students/$courseID']!.length,
+                            resources.length,
                             (index) => SubPageListItem(
-                              subListType: SubPageListType.studentsList,
-                              title:
-                                  "${stStudentsByCourseID['students/$courseID']![index].FirstName} ${stStudentsByCourseID['students/$courseID']![index].LastName}",
-                              studentEmail: stStudentsByCourseID[
-                                      'students/$courseID']![index]
-                                  .email,
-                              studentContactNo: stStudentsByCourseID[
-                                      'students/$courseID']![index]
-                                  .contactNumber,
-                              studentAvatar: stStudentsByCourseID[
-                                      'students/$courseID']![index]
-                                  .profilePhotoWebAddress,
+                              subListType: SubPageListType.studyResources,
+                              title: resources[index].resourceDescription,
+                              publisher: resources[index].resourcePublisher,
+                              icon: Icons.book,
+                              svgIcon: "assets/images/rescources.svg",
                               labelColor:
                                   convertHexToColor(_themes[0].labelFontColor!),
                               dataColor:
@@ -1830,8 +2226,84 @@ class _RootPageState extends State<RootPage> {
                           )
                         ],
                       )
-                    : const NullDataView()
-                : const NullDataView(),
+                    : const NullDataView(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStudentsListPage() {
+    int courseID = _activeCourse.courseID!;
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    return Column(
+      children: [
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
+        SubPageHeaderSection(
+          headerType: SubPageHeaderType.studentsList,
+          title: "اسامی دانشجویان",
+          icon: Icons.person,
+          labelColor: convertHexToColor(_themes[0].labelFontColor!),
+          dataColor: convertHexToColor(_themes[0].datafontColor!),
+          onClickSendMsgToALlStudents: () {
+            if (_activeClassID == -1 || stMyCustomerInfo.customerTypeID == 1) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text(
+                  "Sorry, not allowed for students..",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ));
+            } else {
+              setState(() {
+                _activePageIdx = 15;
+                _pageTrack.add(15);
+              });
+            }
+          },
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: isDataLoading['students']!
+                ? const LoadingView()
+                : stStudentsByCourseID.containsKey('students/$courseID')
+                    ? stStudentsByCourseID['students/$courseID']!.isNotEmpty
+                        ? Column(
+                            children: [
+                              ...List.generate(
+                                stStudentsByCourseID['students/$courseID']!
+                                    .length,
+                                (index) => SubPageListItem(
+                                  subListType: SubPageListType.studentsList,
+                                  title:
+                                      "${stStudentsByCourseID['students/$courseID']![index].FirstName} ${stStudentsByCourseID['students/$courseID']![index].LastName}",
+                                  studentEmail: stStudentsByCourseID[
+                                          'students/$courseID']![index]
+                                      .email,
+                                  studentContactNo: stStudentsByCourseID[
+                                          'students/$courseID']![index]
+                                      .contactNumber,
+                                  studentAvatar: stStudentsByCourseID[
+                                          'students/$courseID']![index]
+                                      .profilePhotoWebAddress,
+                                  labelColor: convertHexToColor(
+                                      _themes[0].labelFontColor!),
+                                  dataColor: convertHexToColor(
+                                      _themes[0].datafontColor!),
+                                ),
+                              )
+                            ],
+                          )
+                        : const NullDataView()
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1840,15 +2312,17 @@ class _RootPageState extends State<RootPage> {
 
   Widget _buildTodayClassesPage() {
     List<Class> classes = getClassesByCourseID(stClasses, -2);
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "کلاسهای امروز",
@@ -1861,37 +2335,38 @@ class _RootPageState extends State<RootPage> {
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: isDataLoading['myClasses']!
-            ? const LoadingView()
-            : classes.isNotEmpty
-                ? Column(
-                    children: [
-                      ...List.generate(
-                        classes.length,
-                        (index) => SubPageListItem(
-                          subListType: SubPageListType.todayClasses,
-                          title: classes[index].classTitle,
-                          classStartDate: classes[index].sessionDateTime,
-                          classStateId: classes[index].sessionDeliveryStatusID,
-                          classStateDescription:
-                              classes[index].sessionStatusDescription,
-                          icon: Icons.class_rounded,
-                          svgIcon: "assets/images/class.svg",
-                          onJoinClass: () {
-                            setState(() {
-                              _activeClass = classes[index];
-                              _activePageIdx = 14;
-                              _pageTrack.add(14);
-                            });
-                          },
-                          labelColor:
-                              convertHexToColor(_themes[0].labelFontColor!),
-                          dataColor:
-                              convertHexToColor(_themes[0].datafontColor!),
-                        ),
+                ? const LoadingView()
+                : classes.isNotEmpty
+                    ? Column(
+                        children: [
+                          ...List.generate(
+                            classes.length,
+                            (index) => SubPageListItem(
+                              subListType: SubPageListType.todayClasses,
+                              title: classes[index].classTitle,
+                              classStartDate: classes[index].sessionDateTime,
+                              classStateId:
+                                  classes[index].sessionDeliveryStatusID,
+                              classStateDescription:
+                                  classes[index].sessionStatusDescription,
+                              icon: Icons.class_rounded,
+                              svgIcon: "assets/images/class.svg",
+                              onJoinClass: () {
+                                setState(() {
+                                  _activeClass = classes[index];
+                                  _activePageIdx = 14;
+                                  _pageTrack.add(14);
+                                });
+                              },
+                              labelColor:
+                                  convertHexToColor(_themes[0].labelFontColor!),
+                              dataColor:
+                                  convertHexToColor(_themes[0].datafontColor!),
+                            ),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                : const NullDataView(),
+                    : const NullDataView(),
           ),
         ),
       ],
@@ -1899,15 +2374,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildFinancialStatementPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "صورت حساب مالی",
@@ -1924,28 +2401,31 @@ class _RootPageState extends State<RootPage> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: isDataLoading['soas']!
-                    ? const LoadingView()
-                    : stSoas.isNotEmpty
-                      ? Column(
-                          children: [
-                            ...List.generate(
-                              stSoas.length,
-                              (index) => SubPageListItem(
-                                subListType: SubPageListType.financialStatement,
-                                transactionDate: stSoas[index].transactionDate,
-                                soaType: stSoas[index].type,
-                                netTotalAmount: stSoas[index].netTotalAmount,
-                                icon: Icons.note_alt_outlined,
-                                svgIcon: "assets/images/money.svg",
-                                labelColor: convertHexToColor(
-                                    _themes[0].labelFontColor!),
-                                dataColor: convertHexToColor(
-                                    _themes[0].datafontColor!),
-                              ),
+                      ? const LoadingView()
+                      : stSoas.isNotEmpty
+                          ? Column(
+                              children: [
+                                ...List.generate(
+                                  stSoas.length,
+                                  (index) => SubPageListItem(
+                                    subListType:
+                                        SubPageListType.financialStatement,
+                                    transactionDate:
+                                        stSoas[index].transactionDate,
+                                    soaType: stSoas[index].type,
+                                    netTotalAmount:
+                                        stSoas[index].netTotalAmount,
+                                    icon: Icons.note_alt_outlined,
+                                    svgIcon: "assets/images/money.svg",
+                                    labelColor: convertHexToColor(
+                                        _themes[0].labelFontColor!),
+                                    dataColor: convertHexToColor(
+                                        _themes[0].datafontColor!),
+                                  ),
+                                )
+                              ],
                             )
-                          ],
-                        )
-                      : const NullDataView(),
+                          : const NullDataView(),
                 ),
               ),
               Container(
@@ -1986,15 +2466,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildAddNewClassPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.addClass,
           title: "کلاس جدید",
@@ -2157,9 +2639,9 @@ class _RootPageState extends State<RootPage> {
                             );
                             if (selectedTime != null) {
                               _sessionStartingTime = DateTime(
-                                now.year,
-                                now.month,
-                                now.day,
+                                _sessionDateTime!.year,
+                                _sessionDateTime!.month,
+                                _sessionDateTime!.day,
                                 selectedTime.hour,
                                 selectedTime.minute,
                               );
@@ -2278,42 +2760,43 @@ class _RootPageState extends State<RootPage> {
                   ),
                 ),
                 Container(
-                    alignment: Alignment.center,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        addClass(
-                            1004,
-                            _sessionDateTime.toString(),
-                            _sessionStartingTime.toString(),
-                            int.parse(durationController.text),
-                            stMyCustomerInfo.customerID!);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.all(0),
-                        shape: RoundedRectangleBorder(
+                  alignment: Alignment.center,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      addClass(
+                          _activeClassID,
+                          _sessionDateTime.toString(),
+                          _sessionStartingTime.toString(),
+                          int.parse(durationController.text),
+                          stMyCustomerInfo.customerID!);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(0.0),
+                      ),
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      height: 40.0,
+                      width: 90,
+                      decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(0.0),
+                          color: const Color(0xffffc000)),
+                      padding: const EdgeInsets.all(0),
+                      child: const Text(
+                        "ذخیره",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
                         ),
                       ),
-                      child: Container(
-                        alignment: Alignment.center,
-                        height: 40.0,
-                        width: 90,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(0.0),
-                            color: const Color(0xffffc000)),
-                        padding: const EdgeInsets.all(0),
-                        child: const Text(
-                          "ذخیره",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    )),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2323,15 +2806,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildJoinClassPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: _activeClass.classTitle,
@@ -2361,12 +2846,21 @@ class _RootPageState extends State<RootPage> {
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
           child: ElevatedButton(
             onPressed: () async {
-              final uri = Uri.parse(_activeClass.sessionWebLink!);
-              // final uri = Uri.parse("https://time.is/United_Arab_Emirates");
+              String msteamsUrl =
+                  _activeClass.sessionWebLink!.replaceFirst("https", "msteams");
+              final uri = Uri.parse(msteamsUrl);
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri);
               } else {
-                throw 'Could not launch';
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text(
+                    "First install Microsoft Teams app..",
+                    style: TextStyle(
+                      color: Colors.red,
+                    ),
+                  ),
+                ));
               }
             },
             style: ElevatedButton.styleFrom(
@@ -2397,15 +2891,17 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildSendMsgToAllStudentsPage() {
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.normal,
           title: "ارسال اعلامیه به دانشجویان من",
@@ -2444,11 +2940,12 @@ class _RootPageState extends State<RootPage> {
                       children: [
                         Expanded(
                           child: TextField(
+                            controller: messageToStudentsController,
                             textAlign: TextAlign.left,
                             textAlignVertical: TextAlignVertical.bottom,
-                            maxLines: 2,
+                            maxLines: 3,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 16,
                               color: Colors.white,
                               fontFamily: 'Roboto',
                             ),
@@ -2492,10 +2989,25 @@ class _RootPageState extends State<RootPage> {
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
           child: ElevatedButton(
             onPressed: () {
-              setState(() {
-                _activePageIdx = 10;
-                _pageTrack.add(10);
-              });
+              DateTime now = DateTime.now();
+              DateTime tenDaysLater = now.add(const Duration(days: 10));
+
+              if (messageToStudentsController.text.isNotEmpty) {
+                Map<String, dynamic> data = {
+                  "createDate": now.toString(),
+                  "subject": "New message from teacher",
+                  "messageBody": messageToStudentsController.text,
+                  "parentMessageID": 0,
+                  "expiryDate": tenDaysLater.toString(),
+                  "isReminder": true,
+                  "messageStatusID": 2,
+                };
+                sendMessage(data, 1);
+                setState(() {
+                  _activePageIdx = 10;
+                  _pageTrack.add(10);
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.all(0),
@@ -2505,7 +3017,7 @@ class _RootPageState extends State<RootPage> {
             ),
             child: Container(
               alignment: Alignment.center,
-              height: 35.0,
+              height: 40.0,
               width: 110,
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(0.0),
@@ -2525,33 +3037,31 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildProfilePage() {
-    emailController.text = stMyCustomerInfo.email ?? "";
-    countryCodeController.text = "+98";
-    contactNumberController.text = stMyCustomerInfo.contactNumber ?? "";
-    residentCountryIDController.text =
-        stMyCustomerInfo.residentCountryID.toString();
-    passportNoController.text = stMyCustomerInfo.passportNo ?? "";
-    nationalIDNoController.text = stMyCustomerInfo.nationalIDNo ?? "";
-    dateOfBirthController.text = DateFormat('dd-MM-yyyy')
-        .format(DateTime.parse(stMyCustomerInfo.dateOfBirth!));
-    nationalCardIDNoController.text = stMyCustomerInfo.nationalCardIDNo ?? "";
+    if (_activeCountry == Country() && !stCountries.contains(Country())) {
+      stCountries.add(Country());
+    }
+    if (_activeCountry != Country() && stCountries.contains(Country())) {
+      stCountries.remove(Country());
+    }
+    Message? lastNotification = getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
-        LastNotificationSection(
-          message: "تا پایان 21 جون مهلت تسویه حساب",
-          receivedDate: DateTime(2022, 4, 25, 15, 30),
-          bgColor: convertHexToColor(_themes[3].bgColor!),
-          notificationColor: convertHexToColor(_themes[3].datafontColor!),
-          labelColor: convertHexToColor(_themes[3].labelFontColor!),
-        ),
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message: lastNotification.messageBody,
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
         SubPageHeaderSection(
           title: "اطلاعات شخصی",
           headerType: SubPageHeaderType.profile,
-          // avatarImage: _avatarImage,
+          avatarImage: _avatarImage,
           avatarAddress: stMyCustomerInfo.profilePhotoWebAddress,
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
-          // onHeaderIconClicked: _handleAvatarUploadButtonPressed,
+          onHeaderIconClicked: _handleAvatarUploadButtonPressed,
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -2622,54 +3132,20 @@ class _RootPageState extends State<RootPage> {
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: countryCodeController,
-                          textAlign: TextAlign.right,
-                          textAlignVertical: TextAlignVertical.bottom,
-                          // textDirection: TextDirection.rtl,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Roboto',
-                            color: Colors.black,
-                          ),
-                          decoration: InputDecoration(
-                              hintText: 'Country Code',
-                              hintStyle: const TextStyle(color: Colors.grey),
-                              filled: true,
-                              fillColor: Colors.white,
-                              enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red)),
-                              focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red))),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
                           controller: contactNumberController,
                           textAlign: TextAlign.right,
                           textAlignVertical: TextAlignVertical.bottom,
                           // textDirection: TextDirection.rtl,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontFamily: 'Roboto',
-                            color: Colors.black,
+                            color: Colors.white,
                           ),
                           decoration: InputDecoration(
-                              hintText: 'Number',
+                              hintText: 'Phone number with prefix code..',
                               hintStyle: const TextStyle(color: Colors.grey),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: convertHexToColor(_themes[1].bgColor!),
                               enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(0),
                                   borderSide: const BorderSide(
@@ -2709,40 +3185,45 @@ class _RootPageState extends State<RootPage> {
                   color: const Color(0xFF323F4F),
                   height: 57,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: residentCountryIDController,
-                          textAlign: TextAlign.right,
-                          textAlignVertical: TextAlignVertical.bottom,
-                          // textDirection: TextDirection.rtl,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Roboto',
-                            color: Colors.black,
+                        child: Container(
+                          color: Colors.white,
+                          child: DropdownButton<Country>(
+                            value: _activeCountry,
+                            isExpanded: true,
+                            items: stCountries.map((Country item) {
+                              return DropdownMenuItem<Country>(
+                                value: item,
+                                child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        item.countryName,
+                                        style: const TextStyle(
+                                          fontFamily: 'Roboto',
+                                          color: Colors.black,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ]),
+                              );
+                            }).toList(),
+                            underline: Container(),
+                            onChanged: (Country? selectedItem) {
+                              setState(() {
+                                _activeCountry = selectedItem!;
+                              });
+                            },
+                            style: const TextStyle(
+                              fontSize: 16,
+                            ),
                           ),
-                          decoration: InputDecoration(
-                              hintText: 'Country',
-                              hintStyle: const TextStyle(color: Colors.grey),
-                              filled: true,
-                              fillColor: Colors.white,
-                              enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide: const BorderSide(
-                                      color: Color(0xFF323F4F))),
-                              errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red)),
-                              focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(0),
-                                  borderSide:
-                                      const BorderSide(color: Colors.red))),
                         ),
+                      ),
+                      const SizedBox(
+                        width: 30,
                       ),
                       Padding(
                         padding: const EdgeInsets.only(left: 5),
@@ -3001,8 +3482,7 @@ class _RootPageState extends State<RootPage> {
                       Map<String, dynamic> customerInfo = {
                         "email": emailController.text,
                         "contactNumber": contactNumberController.text,
-                        "residentCountryID":
-                            int.parse(residentCountryIDController.text),
+                        "residentCountryID": _activeCountry.countryID,
                         "passportNo": passportNoController.text,
                         "nationalIDNo": nationalIDNoController.text,
                         "dateOfBirth": _dateOfBirth.toString(),

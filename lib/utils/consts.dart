@@ -78,11 +78,39 @@ List<String> classStates = [
   "برگذار نشد",
   "طبق برنامه",
   "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
+  "طبق برنامه",
 ];
 
 List<Color> colorOfClassStates = [
   const Color(0xff00ff00),
   const Color(0xffffc000),
   const Color(0xffff0000),
-  const Color(0xffff0000),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
+  const Color(0xff00ff00),
 ];
+
+List<Map<String, String>> countryCodes = [
+  { 'country':  'United Arab Emirates', 'countryCode': '+971' },
+  { 'country':  'Norway', 'countryCode': '+47' },
+  { 'country':  'Chile', 'countryCode': '+56' },
+];
+
+final Map<String, String> mimeTypes = {
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'gif': 'image/gif',
+  'webp': 'image/webp',
+  'svg': 'image/svg+xml',
+  'bmp': 'image/bmp',
+  'tiff': 'image/tiff',
+};

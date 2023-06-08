@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+
 import 'package:rnt_app/utils/consts.dart';
 import 'package:rnt_app/utils/utils.dart';
-import 'package:intl/intl.dart';
 
 class SubPageListItem extends StatelessWidget {
 
@@ -445,8 +447,19 @@ class SubPageListItem extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0, top: 15.0),
+                        child: Text(
+                          convertDateTimeFormat(classStartDate ?? DateTime.now().toString(), ""),
+                          style: TextStyle(
+                            color: dataColor,
+                            fontFamily: 'Roboto',
+                            fontSize: 18,
+                          ),
+                        ), 
+                      ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 30),
                         child: IconTheme(
@@ -476,7 +489,7 @@ class SubPageListItem extends StatelessWidget {
                           convertToTime(recordDuration!),
                           textAlign: TextAlign.left,
                           style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 17,
                               color: dataColor,
                               fontFamily: 'Roboto'
                           ),
@@ -541,10 +554,7 @@ class SubPageListItem extends StatelessWidget {
                     alignment: Alignment.center,
                     margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 3),
                     child: ElevatedButton(
-                      onPressed: () {
-                        // signIn(usernameController.text, passwordController.text);
-                        print("Joini button clicked.");
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.all(0),
                         shape: RoundedRectangleBorder(
@@ -607,7 +617,7 @@ class SubPageListItem extends StatelessWidget {
                 textAlign: TextAlign.right,
                 style: TextStyle(
                     color: labelColor,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontFamily: "Roboto"
                 ),
               )
@@ -629,7 +639,7 @@ class SubPageListItem extends StatelessWidget {
               Padding(
                   padding: const EdgeInsets.only(top: 3, bottom: 0),
                   child: Text(
-                    ": $messageSender!",
+                    ": $messageSender",
                     textAlign: TextAlign.right,
                     style: TextStyle(
                         color: labelColor,
