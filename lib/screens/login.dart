@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -129,263 +130,285 @@ class _LoginPageState extends State<LoginPage> {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: convertHexToColor(_themes[0].bgColor!),
-      body: isAuthed
-      ? const RootPage()
-      : ListView(children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Container(
-              margin: const EdgeInsets.only(top: 25.0),
-              child: SizedBox(
-                height: 120,
-                width: 120,
-                child: Image.memory(
-                  base64Decode(_themes[5].fileData!.split(',').last),
-                ),
-              ),
-            ),
-            SizedBox(height: size.height * 0.09),
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: 0.0, top: 5.0, right: 0, bottom: 5),
-              child: Text(
-                'نام کاربری (کد دانشجویی یا استادی)',
-                style: TextStyle(
-                  color: convertHexToColor(_themes[0].labelFontColor!),
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              height: 35,
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              // padding: const EdgeInsets.only(bottom: 8),
-              child: TextField(
-                controller: usernameController,
-                textAlign: TextAlign.center,
-                textAlignVertical: TextAlignVertical.bottom,
-                textDirection: TextDirection.rtl,
-                style: TextStyle(
-                  fontSize: 18,
-                  color: convertHexToColor(_themes[1].datafontColor!),
-                ),
-                decoration: InputDecoration(
-                    hintText: '',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: convertHexToColor(_themes[1].bgColor!),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Color(0xff222A35))),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Color(0xff222A35))),
-                    errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Colors.red)),
-                    focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Colors.red))),
-              ),
-            ),
-            SizedBox(height: size.height * 0.01),
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: 0.0, top: 5.0, right: 0, bottom: 0),
-              child: Text(
-                'رمز عبور',
-                style: TextStyle(
-                  color: convertHexToColor(_themes[0].labelFontColor!),
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.only(
-                  left: 30.0, top: 0.0, right: 30, bottom: 8),
-              child: Text(
-                'رمز پیش فرض(اتباع ایرانی کد ملی بدون خط تیره یا فاصله) (اتباع غیر ایرانی ش شناسنامه)',
-                style: TextStyle(
-                  color: convertHexToColor(_themes[0].labelFontColor!),
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              height: 35,
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              child: TextField(
-                controller: passwordController,
-                textAlign: TextAlign.center,
-                textAlignVertical: TextAlignVertical.bottom,
-                textDirection: TextDirection.rtl,
-                style: TextStyle(
-                  fontSize: 18,
-                  color: convertHexToColor(_themes[1].datafontColor!),
-                ),
-                decoration: InputDecoration(
-                    hintText: '',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: convertHexToColor(_themes[1].bgColor!),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Color(0xff222A35))),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Color(0xff222A35))),
-                    errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Colors.red)),
-                    focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(0),
-                        borderSide: const BorderSide(color: Colors.red))),
-                obscureText: true,
-              ),
-            ),
-            SizedBox(height: size.height * 0.03),
-            Container(
-              alignment: Alignment.center,
-              margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (usernameController.text.isNotEmpty &&
-                      passwordController.text.isNotEmpty) {
-                    signIn(usernameController.text, passwordController.text);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(0.0),
-                  ),
-                ),
-                child: Container(
-                  alignment: Alignment.center,
-                  height: 40.0,
-                  width: size.width * 0.35,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(0.0),
-                      color: const Color(0xffffc000)),
-                  padding: const EdgeInsets.all(0),
-                  child: const Text(
-                    "ورود",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
+      body: WillPopScope(
+        onWillPop: () async {
+          SystemNavigator.pop();
+          return false;
+        },
+        child: isAuthed
+            ? const RootPage()
+            : ListView(children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Container(
+                      margin: const EdgeInsets.only(top: 25.0),
+                      child: SizedBox(
+                        height: 120,
+                        width: 120,
+                        child: Image.memory(
+                          base64Decode(_themes[5].fileData!.split(',').last),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 0),
-              child: GestureDetector(
-                onTap: () => {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const PasswordRecoveryPage()))
-                },
-                child: const Text(
-                  "بازیابی رمز عبور",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
-              child: GestureDetector(
-                onTap: () => {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const RegisterPage()))
-                },
-                child: const Text(
-                  "ثبت نام",
-                  style: TextStyle(
-                    fontSize: 12,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              // margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              margin: const EdgeInsets.only(
-                  left: 10, top: 30, right: 10, bottom: 5),
-              child: GestureDetector(
-                onTap: () => {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const RegisterPage()))
-                },
-                child: const Text(
-                  "در صورتی که دانشجو و یا استاد دانشگاه پیام نور مرکز بین الملل هستید و امکان ورود به سیستم  برای شما نیست درخواست  بررسی ثبت نمایید",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-              ),
-            ),
-            SizedBox(height: size.height * 0.02),
-            Container(
-              alignment: Alignment.center,
-              margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 0),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const ContactUsPage()));
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(0.0),
-                  ),
-                ),
-                child: Container(
-                  alignment: Alignment.center,
-                  height: 40.0,
-                  width: size.width * 0.7,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(0.0),
-                      color: const Color(0xffffc000)),
-                  padding: const EdgeInsets.all(0),
-                  child: const Text(
-                    "ثبت درخواست بررسی عدم دسترسی",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
+                    SizedBox(height: size.height * 0.09),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 0.0, top: 5.0, right: 0, bottom: 5),
+                      child: Text(
+                        'نام کاربری (کد دانشجویی یا استادی)',
+                        style: TextStyle(
+                          color: convertHexToColor(_themes[0].labelFontColor!),
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
-                  ),
+                    Container(
+                      alignment: Alignment.center,
+                      height: 35,
+                      margin: const EdgeInsets.symmetric(horizontal: 40),
+                      // padding: const EdgeInsets.only(bottom: 8),
+                      child: TextField(
+                        controller: usernameController,
+                        textAlign: TextAlign.center,
+                        textAlignVertical: TextAlignVertical.bottom,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: convertHexToColor(_themes[1].datafontColor!),
+                        ),
+                        decoration: InputDecoration(
+                            hintText: '',
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: convertHexToColor(_themes[1].bgColor!),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Color(0xff222A35))),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Color(0xff222A35))),
+                            errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Colors.red)),
+                            focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Colors.red))),
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.01),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 0.0, top: 5.0, right: 0, bottom: 0),
+                      child: Text(
+                        'رمز عبور',
+                        style: TextStyle(
+                          color: convertHexToColor(_themes[0].labelFontColor!),
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.only(
+                          left: 30.0, top: 0.0, right: 30, bottom: 8),
+                      child: Text(
+                        'رمز پیش فرض(اتباع ایرانی کد ملی بدون خط تیره یا فاصله) (اتباع غیر ایرانی ش شناسنامه)',
+                        style: TextStyle(
+                          color: convertHexToColor(_themes[0].labelFontColor!),
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      height: 35,
+                      margin: const EdgeInsets.symmetric(horizontal: 40),
+                      child: TextField(
+                        controller: passwordController,
+                        textAlign: TextAlign.center,
+                        textAlignVertical: TextAlignVertical.bottom,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: convertHexToColor(_themes[1].datafontColor!),
+                        ),
+                        decoration: InputDecoration(
+                            hintText: '',
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: convertHexToColor(_themes[1].bgColor!),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Color(0xff222A35))),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Color(0xff222A35))),
+                            errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Colors.red)),
+                            focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(0),
+                                borderSide:
+                                    const BorderSide(color: Colors.red))),
+                        obscureText: true,
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.03),
+                    Container(
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 12),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (usernameController.text.isNotEmpty &&
+                              passwordController.text.isNotEmpty) {
+                            signIn(usernameController.text,
+                                passwordController.text);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.all(0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(0.0),
+                          ),
+                        ),
+                        child: Container(
+                          alignment: Alignment.center,
+                          height: 40.0,
+                          width: size.width * 0.35,
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(0.0),
+                              color: const Color(0xffffc000)),
+                          padding: const EdgeInsets.all(0),
+                          child: const Text(
+                            "ورود",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 0),
+                      child: GestureDetector(
+                        onTap: () => {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const PasswordRecoveryPage()))
+                        },
+                        child: const Text(
+                          "بازیابی رمز عبور",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                            decorationColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 5),
+                      child: GestureDetector(
+                        onTap: () => {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const RegisterPage()))
+                        },
+                        child: const Text(
+                          "ثبت نام",
+                          style: TextStyle(
+                            fontSize: 12,
+                            decoration: TextDecoration.underline,
+                            decorationColor: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      // margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      margin: const EdgeInsets.only(
+                          left: 10, top: 30, right: 10, bottom: 5),
+                      child: GestureDetector(
+                        onTap: () => {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const RegisterPage()))
+                        },
+                        child: const Text(
+                          "در صورتی که دانشجو و یا استاد دانشگاه پیام نور مرکز بین الملل هستید و امکان ورود به سیستم  برای شما نیست درخواست  بررسی ثبت نمایید",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.02),
+                    Container(
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 0),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const ContactUsPage()));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.all(0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(0.0),
+                          ),
+                        ),
+                        child: Container(
+                          alignment: Alignment.center,
+                          height: 40.0,
+                          width: size.width * 0.7,
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(0.0),
+                              color: const Color(0xffffc000)),
+                          padding: const EdgeInsets.all(0),
+                          child: const Text(
+                            "ثبت درخواست بررسی عدم دسترسی",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ]),
+              ]),
+      ),
     );
   }
 }

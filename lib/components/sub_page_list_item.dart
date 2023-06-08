@@ -617,7 +617,7 @@ class SubPageListItem extends StatelessWidget {
                 textAlign: TextAlign.right,
                 style: TextStyle(
                     color: labelColor,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontFamily: "Roboto"
                 ),
               )
@@ -639,7 +639,7 @@ class SubPageListItem extends StatelessWidget {
               Padding(
                   padding: const EdgeInsets.only(top: 3, bottom: 0),
                   child: Text(
-                    ": $messageSender!",
+                    ": $messageSender",
                     textAlign: TextAlign.right,
                     style: TextStyle(
                         color: labelColor,

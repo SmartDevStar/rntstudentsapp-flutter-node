@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:rnt_app/models/theme_model.dart';
 import 'package:rnt_app/utils/utils.dart';
 import 'package:rnt_app/utils/data.dart';
+import 'package:rnt_app/utils/consts.dart';
 
 import 'package:rnt_app/screens/login.dart';
 
@@ -18,12 +20,15 @@ class ContactUsPage extends StatefulWidget {
 }
 
 class _ContactUsPageState extends State<ContactUsPage> {
-  TextEditingController usernameController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-
-  String _userRole = '';
+  String _userRole = 'teacher';
   List<MyTheme> _themes = List.generate(
       defaultThemes.length, (index) => MyTheme.fromMap(defaultThemes[index]));
+
+  TextEditingController usernameController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
+  TextEditingController codeController = TextEditingController();
+  TextEditingController contactController = TextEditingController();
+  TextEditingController messageController = TextEditingController();
 
   void _handleRadioValueChange(String? value) {
     setState(() {
@@ -48,6 +53,43 @@ class _ContactUsPageState extends State<ContactUsPage> {
     setState(() {
       _themes = themes;
     });
+  }
+
+  Future<void> sendContactMessage(Map<String, dynamic> data) async {
+    String url = "$serverDomain/api/customers/noaccessmessage";
+
+    final res = await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(data),
+    );
+    print(data);
+    print(res.body);
+    if (res.statusCode == 200) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Successfully sent..",
+          style: TextStyle(
+            color: Colors.green,
+          ),
+        ),
+      ));
+      Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const LoginPage()));
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Something went wrong..",
+          style: TextStyle(
+            color: Colors.red,
+          ),
+        ),
+      ));
+    }
   }
 
   @override
@@ -181,12 +223,14 @@ class _ContactUsPageState extends State<ContactUsPage> {
       color: const Color(0xFF323F4F),
       height: 57,
       child: TextField(
-        // controller: usernameController,
+        controller: codeController,
         textAlign: TextAlign.right,
         textAlignVertical: TextAlignVertical.bottom,
         textDirection: TextDirection.rtl,
         style: TextStyle(
-            fontSize: 18, color: convertHexToColor(_themes[1].datafontColor!)),
+            fontFamily: 'Roboto',
+            fontSize: 18, color: convertHexToColor(_themes[1].datafontColor!),
+          ),
         decoration: InputDecoration(
             hintText: ':کد دانشجویی/کد استادی',
             hintStyle: const TextStyle(color: Colors.grey),
@@ -246,41 +290,15 @@ class _ContactUsPageState extends State<ContactUsPage> {
         children: [
           Expanded(
             child: TextField(
-              // controller: usernameController,
+              controller: contactController,
               textAlign: TextAlign.right,
               textAlignVertical: TextAlignVertical.bottom,
               textDirection: TextDirection.rtl,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 16,
-                  color: convertHexToColor(_themes[1].datafontColor!)),
-              decoration: InputDecoration(
-                  hintText: 'Country Code',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.white,
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red)),
-                  focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red))),
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              // controller: usernameController,
-              textAlign: TextAlign.right,
-              textAlignVertical: TextAlignVertical.bottom,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                  fontSize: 16,
-                  color: convertHexToColor(_themes[1].datafontColor!)),
+                  color: Colors.black,
+                  fontFamily: 'Roboto',
+                ),
               decoration: InputDecoration(
                   hintText: 'Number',
                   hintStyle: const TextStyle(color: Colors.grey),
@@ -300,6 +318,9 @@ class _ContactUsPageState extends State<ContactUsPage> {
                       borderSide: const BorderSide(color: Colors.red))),
             ),
           ),
+          const SizedBox(
+            width: 30,
+          ),
           Padding(
             padding: const EdgeInsets.only(left: 5),
             child: Text(
@@ -315,13 +336,10 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
     Widget messageSection = Container(
       margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding:
-          const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7.0),
       color: const Color(0xFF323F4F),
-      height: 120,
       child: TextField(
-        // controller: emailController,
-        maxLines: null,
+        controller: messageController,
+        maxLines: 3,
         textAlign: TextAlign.right,
         textAlignVertical: TextAlignVertical.bottom,
         textDirection: TextDirection.rtl,
@@ -365,9 +383,24 @@ class _ContactUsPageState extends State<ContactUsPage> {
             margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
             child: ElevatedButton(
               onPressed: () {
-                // signIn(usernameController.text, passwordController.text);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()));
+                if (
+                  usernameController.text.isNotEmpty &&
+                  codeController.text.isNotEmpty &&
+                  emailController.text.isNotEmpty &&
+                  contactController.text.isNotEmpty &&
+                  messageController.text.isNotEmpty
+                ) {
+                 Map<String, dynamic> data = {
+                   "name": usernameController.text, 
+                    "code": codeController.text,
+                    "email": emailController.text, 
+                    "contact": contactController.text, 
+                    "description": messageController.text,
+                    "type": _userRole == 'student' ? 1 : 2,
+                    "source": 1,
+                  };
+                  sendContactMessage(data); 
+                }
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(0),

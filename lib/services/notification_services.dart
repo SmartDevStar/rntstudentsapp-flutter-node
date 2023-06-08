@@ -3,7 +3,12 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 
 class NotificationApi {
+  Function onSelectNotification;
   final _localNotificationApi = FlutterLocalNotificationsPlugin();
+
+  NotificationApi({
+    required this.onSelectNotification,
+  });
 
   Future<void> initApi() async {
     tz.initializeTimeZones();
@@ -112,6 +117,6 @@ class NotificationApi {
 
   void onDidReceiveNotificationResponse(
       NotificationResponse notificationResponse) async {
-        print("Tapped!");
+        onSelectNotification();
       }
 }
