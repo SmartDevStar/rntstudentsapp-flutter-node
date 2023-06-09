@@ -303,7 +303,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
                   hintText: 'Number',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: convertHexToColor(_themes[1].bgColor!),
                   enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(0),
                       borderSide: const BorderSide(color: Color(0xFF323F4F))),

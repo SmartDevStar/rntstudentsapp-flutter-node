@@ -102,7 +102,7 @@ class _RootPageState extends State<RootPage> {
   TextEditingController messageToUsController = TextEditingController();
   TextEditingController messageToStudentsController = TextEditingController();
 
-  ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
   Future<void> fetchInitAppData() async {
     await fetchMyCustomerInfo();
@@ -380,7 +380,9 @@ class _RootPageState extends State<RootPage> {
         students = (jsonStudents as List)
             .map((myMap) => Customer.fromMap(myMap))
             .toList();
-        students = students.where((item) => item.customerID != stMyCustomerInfo.customerID).toList();
+        students = students
+            .where((item) => item.customerID != stMyCustomerInfo.customerID)
+            .toList();
         String encodedStudents = json.encode(students);
         // print("online-Students/$courseID : $encodedStudents");
         await prefs.setString('students/$courseID', encodedStudents);
@@ -550,7 +552,9 @@ class _RootPageState extends State<RootPage> {
     });
 
     for (Message msg in messages) {
-      if (msg.messageStatusID == 2 && msg.recieptStatusID == 1 && msg.recipientID == stMyCustomerInfo.registerID) {
+      if (msg.messageStatusID == 2 &&
+          msg.recieptStatusID == 1 &&
+          msg.recipientID == stMyCustomerInfo.registerID) {
         Map<String, dynamic> data = {
           "recipientID": msg.recipientID,
           "recieptStatusID": 3,
@@ -610,21 +614,24 @@ class _RootPageState extends State<RootPage> {
     List<Message> chatMessages =
         allMessages.where((item) => item.isReminder == false).toList();
     chatMessages.sort((a, b) => a.createDate.compareTo(b.createDate));
-    try{
+    try {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeOut,
       );
-    } catch(e) {
+    } catch (e) {
       print(e);
     }
     return chatMessages;
   }
 
   List<Message> getNotifications(List<Message> allMessages) {
-    List<Message> notifications =
-        allMessages.where((item) => item.isReminder == true && item.recipientID == stMyCustomerInfo.registerID).toList();
+    List<Message> notifications = allMessages
+        .where((item) =>
+            item.isReminder == true &&
+            item.recipientID == stMyCustomerInfo.registerID)
+        .toList();
     return notifications;
   }
 
@@ -752,7 +759,8 @@ class _RootPageState extends State<RootPage> {
 
         print(courseID);
         print(messageID);
-        for (Customer item in stStudentsByCourseID['students/$courseID'] ?? []) {
+        for (Customer item
+            in stStudentsByCourseID['students/$courseID'] ?? []) {
           if (item.RegisterID != 0) {
             final res = await http.put(
               Uri.parse(url),
@@ -760,7 +768,8 @@ class _RootPageState extends State<RootPage> {
                 'Content-Type': 'application/json; charset=UTF-8',
                 'Authorization': 'Bearer $token',
               },
-              body: jsonEncode({"recipientID": item.RegisterID, "recieptStatusID": 1}),
+              body: jsonEncode(
+                  {"recipientID": item.RegisterID, "recieptStatusID": 1}),
             );
             print(item.RegisterID);
             if (res.statusCode != 200) {
@@ -793,7 +802,7 @@ class _RootPageState extends State<RootPage> {
           ),
         ),
       ));
-    }    
+    }
   }
 
   Future<void> _updateCustomerInfo(
@@ -869,7 +878,9 @@ class _RootPageState extends State<RootPage> {
   Future<void> updateChatMsgRecipientStatus(int newStatus) async {
     List<Message> chatMessages = getChatMessages(stMessages);
     for (Message msg in chatMessages) {
-      if (msg.messageStatusID == 2 && msg.recieptStatusID != newStatus && msg.recipientID == stMyCustomerInfo.registerID) {
+      if (msg.messageStatusID == 2 &&
+          msg.recieptStatusID != newStatus &&
+          msg.recipientID == stMyCustomerInfo.registerID) {
         Map<String, dynamic> data = {
           "recipientID": msg.recipientID,
           "recieptStatusID": newStatus,
@@ -1010,7 +1021,8 @@ class _RootPageState extends State<RootPage> {
     super.initState();
     _pageTrack.add(0);
 
-    notificationApi = NotificationApi(onSelectNotification: onSelectNotification);
+    notificationApi =
+        NotificationApi(onSelectNotification: onSelectNotification);
     notificationApi.initApi();
 
     timer = Timer.periodic(const Duration(seconds: 30), (timer) {
@@ -1359,20 +1371,27 @@ class _RootPageState extends State<RootPage> {
               color: convertHexToColor(_themes[4].labelFontColor!),
               activeColor: convertHexToColor(_themes[4].datafontColor!),
               onTap: () {
-                if (index == 3) {
-                  _refreshPage();
-                } else {
-                  if (index == 1) {
-                    updateChatMsgRecipientStatus(4);
-                  }
-                  if (index == 2) {
-                    updateNotificationRecipientStatus(4);
-                  }
-                  setState(() {
-                    _activePageIdx = index;
-                    _pageTrack.add(index);
-                  });
-                }
+            if (index == 3) {
+              _refreshPage();
+            } else {
+              if (index == 1) {
+                updateChatMsgRecipientStatus(4);
+                Future.delayed(const Duration(seconds: 1), () {
+                  _scrollController.animateTo(
+                    _scrollController.position.maxScrollExtent,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOut,
+                  );
+                });
+              }
+              if (index == 2) {
+                updateNotificationRecipientStatus(4);
+              }
+              setState(() {
+                _activePageIdx = index;
+                _pageTrack.add(index);
+              });
+            }
           }),
         ),
       ),
@@ -1380,7 +1399,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildHomePage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -1612,7 +1632,8 @@ class _RootPageState extends State<RootPage> {
 
   Widget _buildContactUsPage() {
     List<Message> chatMessages = getChatMessages(stMessages);
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -1635,25 +1656,28 @@ class _RootPageState extends State<RootPage> {
             controller: _scrollController,
             scrollDirection: Axis.vertical,
             child: chatMessages.isNotEmpty
-                    ? Column(
-                        children: [
-                          ...List.generate(
-                            chatMessages.length,
-                            (index) => SubPageListItem(
-                              subListType: SubPageListType.chatMessage,
-                              messageDate: convertDateTimeFormat(chatMessages[index].createDate, ""),
-                              messageContent: chatMessages[index].messageBody,
-                              messageSender: chatMessages[index].recipientID == stMyCustomerInfo.registerID
-                              ? "مرکز" : "شما",
-                              labelColor:
-                                  convertHexToColor(_themes[0].labelFontColor!),
-                              dataColor:
-                                  convertHexToColor(_themes[0].datafontColor!),
-                            ),
-                          ),
-                        ],
-                      )
-                    : const NullDataView(),
+                ? Column(
+                    children: [
+                      ...List.generate(
+                        chatMessages.length,
+                        (index) => SubPageListItem(
+                          subListType: SubPageListType.chatMessage,
+                          messageDate: convertDateTimeFormat(
+                              chatMessages[index].createDate, ""),
+                          messageContent: chatMessages[index].messageBody,
+                          messageSender: chatMessages[index].recipientID ==
+                                  stMyCustomerInfo.registerID
+                              ? "مرکز"
+                              : "شما",
+                          labelColor:
+                              convertHexToColor(_themes[0].labelFontColor!),
+                          dataColor:
+                              convertHexToColor(_themes[0].datafontColor!),
+                        ),
+                      ),
+                    ],
+                  )
+                : const NullDataView(),
           ),
         ),
         Row(
@@ -1770,8 +1794,8 @@ class _RootPageState extends State<RootPage> {
                             notifications.length,
                             (index) => LastNotificationSection(
                               message: notifications[index].messageBody,
-                              receivedDate:
-                                  DateTime.parse(notifications[index].createDate),
+                              receivedDate: DateTime.parse(
+                                  notifications[index].createDate),
                               bgColor: const Color(0xFF333F50),
                               notificationColor:
                                   convertHexToColor(_themes[0].datafontColor!),
@@ -1790,7 +1814,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildRefreshPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -1818,7 +1843,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildMyCoursesPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -1874,7 +1900,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildCourseDetailPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -1981,7 +2008,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildMyClassSchedulePage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     List<Class> myClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
     _activeClassID = myClasses.isNotEmpty ? myClasses[0].classID : -1;
@@ -2053,7 +2081,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildAllClassSchedulePage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     List<Class> classes = getClassesByCourseID(stClasses, -1);
     return Column(
       children: [
@@ -2107,7 +2136,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildRecordedClassesPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     List<Class> courseClasses =
         getClassesByCourseID(stClasses, _activeCourse.courseID!);
     List<Class> recordedClasses = courseClasses
@@ -2182,7 +2212,8 @@ class _RootPageState extends State<RootPage> {
   Widget _buildStudyResourcesPage() {
     List<Resource> resources =
         getResourcesByCourseID(stResources, _activeCourse.courseID!);
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2235,7 +2266,8 @@ class _RootPageState extends State<RootPage> {
 
   Widget _buildStudentsListPage() {
     int courseID = _activeCourse.courseID!;
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2312,7 +2344,8 @@ class _RootPageState extends State<RootPage> {
 
   Widget _buildTodayClassesPage() {
     List<Class> classes = getClassesByCourseID(stClasses, -2);
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2374,7 +2407,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildFinancialStatementPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2466,7 +2500,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildAddNewClassPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2806,7 +2841,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildJoinClassPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2891,7 +2927,8 @@ class _RootPageState extends State<RootPage> {
   }
 
   Widget _buildSendMsgToAllStudentsPage() {
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -3043,7 +3080,8 @@ class _RootPageState extends State<RootPage> {
     if (_activeCountry != Country() && stCountries.contains(Country())) {
       stCountries.remove(Country());
     }
-    Message? lastNotification = getLastNotification(getNotifications(stMessages));
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -3189,8 +3227,10 @@ class _RootPageState extends State<RootPage> {
                     children: [
                       Expanded(
                         child: Container(
-                          color: Colors.white,
+                          color: convertHexToColor(_themes[1].bgColor!),
                           child: DropdownButton<Country>(
+                            dropdownColor:
+                                convertHexToColor(_themes[1].bgColor!),
                             value: _activeCountry,
                             isExpanded: true,
                             items: stCountries.map((Country item) {
@@ -3203,7 +3243,7 @@ class _RootPageState extends State<RootPage> {
                                         item.countryName,
                                         style: const TextStyle(
                                           fontFamily: 'Roboto',
-                                          color: Colors.black,
+                                          color: Colors.white,
                                         ),
                                         textAlign: TextAlign.right,
                                       ),
