@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:rnt_app/services/notification_services.dart';
 
 String serverDomain = "http://pnuglobal.dyndns.org:9001";
+
+NotificationApi notificationApi = NotificationApi(onSelectNotification: (){});
 
 List<IconData> tapIcons = [
   Icons.home,

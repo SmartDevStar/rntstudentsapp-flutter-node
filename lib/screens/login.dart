@@ -35,8 +35,8 @@ class _LoginPageState extends State<LoginPage> {
   Future<bool> _checkAuth() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (prefs.containsKey('jwt')) {
-      // Navigator.push(
-      //   context, MaterialPageRoute(builder: (context) => const RootPage()));
+      Navigator.push(
+            context, MaterialPageRoute(builder: (context) => const RootPage()));
       setState(() {
         isAuthed = true;
       });
@@ -121,8 +121,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
     setMyTheme();
+    _checkAuth();
   }
 
   @override
@@ -135,9 +135,7 @@ class _LoginPageState extends State<LoginPage> {
           SystemNavigator.pop();
           return false;
         },
-        child: isAuthed
-            ? const RootPage()
-            : ListView(children: [
+        child: ListView(children: [
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[

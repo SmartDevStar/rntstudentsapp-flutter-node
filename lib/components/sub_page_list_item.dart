@@ -632,7 +632,8 @@ class SubPageListItem extends StatelessWidget {
                     textAlign: TextAlign.right,
                     style: TextStyle(
                         color: dataColor,
-                        fontSize: 16
+                        fontSize: 16,
+                        fontFamily: 'Roboto',
                     ),
                   )
               ),

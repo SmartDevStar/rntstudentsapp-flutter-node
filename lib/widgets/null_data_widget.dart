@@ -9,13 +9,16 @@ class NullDataView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(
+      child: Padding(
+        padding: EdgeInsets.only(top: 50),
+        child: Text(
           text,
-        style: const TextStyle(
-          color: Colors.grey,
-          fontSize: 16,
-        ),
-      ),
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
+          ),
+        ), 
+      ), 
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rnt_app/models/theme_model.dart';
 import 'package:rnt_app/utils/data.dart';
 import 'package:rnt_app/utils/consts.dart';
+import 'package:rnt_app/utils/utils.dart';
 
 import 'package:rnt_app/screens/login.dart';
 
@@ -23,37 +24,12 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   bool isDataFetched = false;
 
-  Future<void> fetchAppTheme() async {
+  Future<void> getAppTheme() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    bool isError = false;
-    List<MyTheme> themes =
-        defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
+    final res = await fetchAppTheme();
 
-    try {
-      final response = await http.get(
-        Uri.parse('$serverDomain/api/setting/all'),
-      );
-
-      if (response.statusCode == 200) {
-        var jsonThemeData = json.decode(response.body)[0];
-        themes = (jsonThemeData as List)
-            .map((myMap) => MyTheme.fromMap(myMap))
-            .toList();
-        String encodedAppTheme = json.encode(themes);
-        print("online-AppTheme : $encodedAppTheme");
-        await prefs.setString('appTheme', encodedAppTheme);
-        setState(() {
-          isDataFetched = true;
-        });
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
-
-    if (isError) {
+    if (res['isError']) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -66,13 +42,20 @@ class _SplashPageState extends State<SplashPage> {
       setState(() {
         isDataFetched = true;
       });
+    } else {
+      String encodedAppTheme = json.encode(res['data']);
+      // print("online-AppTheme : $encodedAppTheme");
+      await prefs.setString('appTheme', encodedAppTheme);
+      setState(() {
+        isDataFetched = true;
+      });
     }
   }
 
   @override
   void initState() {
     super.initState();
-    fetchAppTheme();
+    getAppTheme();
   }
 
   @override
