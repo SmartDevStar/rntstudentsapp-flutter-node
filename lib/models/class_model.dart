@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:rnt_app/utils/utils.dart';
 
 class Class {
   int? customerID;
@@ -86,7 +87,7 @@ class Class {
       classID: map['classID'],
       sessionStatusDescription: map['sessionStatusDescription'],
       sessionStatusID: map['sessionStatusID'],
-      sessionDateTime: map['sessionDateTime'],
+      sessionDateTime: convertUTC2Local(map['sessionDateTime']),
       sessionDuration: map['sessionDuration'],
       sessionNote: map['sessionNote'],
       sessionDeliveryStatusID: map['sessionDeliveryStatusID'],

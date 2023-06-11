@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:rnt_app/utils/utils.dart';
 class Message {
   int messageID;
   int createdByID;
@@ -44,12 +44,12 @@ class Message {
       CreatorCustomerID: map['CreatorCustomerID'] ?? -1,
       FirstName: map['FirstName'] ?? "",
       LastName: map['LastName'] ?? "",
-      createDate: map['createDate'] ?? "",
+      createDate: convertUTC2Local(map['createDate'] ?? ""),
       subject: map['subject'] ?? "",
       messageBody: map['messageBody'] ?? "",
-      expiryDate: map['expiryDate'] ?? "",
+      expiryDate: convertUTC2Local(map['expiryDate'] ?? ""),
       isReminder: map['isReminder'] ?? false,
-      nextReminderDate: map['nextReminderDate'] ?? "",
+      nextReminderDate: convertUTC2Local(map['nextReminderDate'] ?? ""),
       messageStatusID: map['messageStatusID'] ?? 1,
       messageStatusDescription: map['messageStatusDescription'] ?? "",
       recieptStatusID: map['recieptStatusID'] ?? 1,

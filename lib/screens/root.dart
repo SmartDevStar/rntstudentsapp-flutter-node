@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import 'package:workmanager/workmanager.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
@@ -44,10 +45,9 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  late final NotificationApi notificationApi;
-
   Timer? timer;
   bool _isLoading = false;
+  bool isNewMessage = false;
   int _activePageIdx = 0;
   Map<String, bool> isDataFetched = {};
   Map<String, bool> isDataLoading = {
@@ -104,46 +104,25 @@ class _RootPageState extends State<RootPage> {
 
   final ScrollController _scrollController = ScrollController();
 
-  Future<void> fetchInitAppData() async {
-    await fetchMyCustomerInfo();
-    await fetchAppTheme();
-    await fetchMessages();
-    await fetchCountries();
-    await fetchClasses();
+  Future<void> getInitAppData() async {
+    await getMyCustomerInfo();
+    await getAppTheme();
+    await getMessages();
+    await getCountries();
+    await getClasses();
   }
 
-  Future<void> fetchAppTheme() async {
+  Future<void> getAppTheme() async {
     setState(() {
       isDataLoading['appTheme'] = true;
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    bool isError = false;
     List<MyTheme> themes =
         defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
 
-    try {
-      final response = await http.get(
-        Uri.parse('$serverDomain/api/setting/all'),
-      );
+    final res = await fetchAppTheme();
 
-      if (response.statusCode == 200) {
-        var jsonThemeData = json.decode(response.body)[0];
-        themes = (jsonThemeData as List)
-            .map((myMap) => MyTheme.fromMap(myMap))
-            .toList();
-        String encodedAppTheme = json.encode(themes);
-        // print("online-AppTheme : $encodedAppTheme");
-        await prefs.setString('appTheme', encodedAppTheme);
-        isDataFetched['appTheme'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
-
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['appTheme'] = false;
       final encodedAppTheme = prefs.getString('appTheme');
       if (encodedAppTheme != null && encodedAppTheme != "") {
@@ -153,6 +132,12 @@ class _RootPageState extends State<RootPage> {
             .map((item) => MyTheme.fromJson(item))
             .toList();
       }
+    } else {
+      themes = res['data'];
+      String encodedAppTheme = json.encode(res['data']);
+      // print("online-AppTheme : $encodedAppTheme");
+      await prefs.setString('appTheme', encodedAppTheme);
+      isDataFetched['appTheme'] = true;
     }
 
     setState(() {
@@ -161,44 +146,30 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchMyCustomerInfo() async {
+  Future<void> getMyCustomerInfo() async {
     setState(() {
       isDataLoading['myCusInfo'] = true;
     });
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("jwt");
-
-    bool isError = false;
     Customer myCusInfo = Customer();
-    try {
-      final myCusInfoRes = await http.get(
-          Uri.parse('$serverDomain/api/customers/me'),
-          headers: {'Authorization': 'Bearer $token'});
 
-      if (myCusInfoRes.statusCode == 200) {
-        var jsonMyCusInfo = json.decode(myCusInfoRes.body)[0];
-        String encodedMyCusInfo =
-            json.encode(Customer.fromMap(jsonMyCusInfo[0]));
-        // print("online-myCusInfo : $encodedMyCusInfo");
-        await prefs.setString('myCusInfo', encodedMyCusInfo);
-        myCusInfo = Customer.fromMap(jsonMyCusInfo[0]);
+    final res = await fetchMyCustomerInfo();
 
-        isDataFetched['myCusInfo'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
-
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['myCusInfo'] = false;
       final encodedMyCusInfo = prefs.getString('myCusInfo');
       if (encodedMyCusInfo != null && encodedMyCusInfo != "") {
-        // print("offline-myCusInfo : $encodedMyCusInfo");
+        print("offline-myCusInfo : $encodedMyCusInfo");
         var decodedMyCusInfo = json.decode(encodedMyCusInfo);
         myCusInfo = Customer.fromJson(decodedMyCusInfo);
       }
+    } else {
+      myCusInfo = res['data'];
+      String encodedMyCusInfo = json.encode(res['data']);
+      // print("online-myCusInfo : $encodedMyCusInfo");
+      await prefs.setString('myCusInfo', encodedMyCusInfo);
+      isDataFetched['myCusInfo'] = true;
     }
 
     emailController.text = myCusInfo.email ?? "";
@@ -216,37 +187,17 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchClasses() async {
+  Future<void> getClasses() async {
     setState(() {
       isDataLoading['myClasses'] = true;
     });
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("jwt");
-
-    bool isError = false;
     List<Class> classes = [];
-    try {
-      final classesRes = await http.get(
-          Uri.parse('$serverDomain/api/courses/myclasses'),
-          headers: {'Authorization': 'Bearer $token'});
 
-      var jsonClasses = json.decode(classesRes.body)[0];
-      if (classesRes.statusCode == 200) {
-        classes = (jsonClasses as List)
-            .map((myclass) => Class.fromMap(myclass))
-            .toList();
-        String encodedClasses = json.encode(classes);
-        // print("online-Classes : $encodedClasses");
-        await prefs.setString('myClasses', encodedClasses);
-        isDataFetched['myClasses'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
+    final res = await fetchClasses();
 
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['myClasses'] = false;
       final encodedClasses = prefs.getString('myClasses');
       if (encodedClasses != null && encodedClasses != "") {
@@ -256,6 +207,12 @@ class _RootPageState extends State<RootPage> {
             .map((classe) => Class.fromJson(classe))
             .toList();
       }
+    } else {
+      classes = res['data'];
+      String encodedClasses = json.encode(res['data']);
+      // print("online-Classes : $encodedClasses");
+      await prefs.setString('myClasses', encodedClasses);
+      isDataFetched['myClasses'] = true;
     }
 
     setState(() {
@@ -264,37 +221,17 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchCourses() async {
+  Future<void> getCourses() async {
     setState(() {
       isDataLoading['myCourses'] = true;
     });
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("jwt");
-
-    bool isError = false;
     List<Course> myCourses = [];
-    try {
-      final myCoursesRes = await http.get(
-          Uri.parse('$serverDomain/api/courses/mine'),
-          headers: {'Authorization': 'Bearer $token'});
 
-      var jsonMyCourses = json.decode(myCoursesRes.body)[0];
-      if (myCoursesRes.statusCode == 200) {
-        myCourses = (jsonMyCourses as List)
-            .map((course) => Course.fromMap(course))
-            .toList();
-        String encodedMyCourses = json.encode(myCourses);
-        // print("online-Courses : $encodedMyCourses");
-        await prefs.setString('myCourses', encodedMyCourses);
-        isDataFetched['myCourses'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
+    final res = await fetchCourses();
 
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['myCourses'] = false;
       final encodedMyCourses = prefs.getString('myCourses');
       if (encodedMyCourses != null && encodedMyCourses != "") {
@@ -304,6 +241,12 @@ class _RootPageState extends State<RootPage> {
             .map((course) => Course.fromJson(course))
             .toList();
       }
+    } else {
+      myCourses = res['data'];
+      String encodedMyCourses = json.encode(myCourses);
+      // print("online-Courses : $encodedMyCourses");
+      await prefs.setString('myCourses', encodedMyCourses);
+      isDataFetched['myCourses'] = true;
     }
 
     setState(() {
@@ -312,38 +255,17 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchResources() async {
+  Future<void> getResources() async {
     setState(() {
       isDataLoading['resources'] = true;
     });
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("jwt");
 
-    bool isError = false;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     List<Resource> resources = [];
 
-    try {
-      final resourcesRes = await http.get(
-          Uri.parse('$serverDomain/api/courses/myresources'),
-          headers: {'Authorization': 'Bearer $token'});
+    final res = await fetchResources();
 
-      var jsonResources = json.decode(resourcesRes.body)[0];
-      if (resourcesRes.statusCode == 200) {
-        resources = (jsonResources as List)
-            .map((resource) => Resource.fromMap(resource))
-            .toList();
-        String encodedResources = json.encode(resources);
-        // print("online-Resources : $encodedResources");
-        await prefs.setString('resources', encodedResources);
-        isDataFetched['resources'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
-
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['resources'] = false;
       final encodedResources = prefs.getString('resources');
       if (encodedResources != null && encodedResources != "") {
@@ -353,6 +275,12 @@ class _RootPageState extends State<RootPage> {
             .map((resource) => Resource.fromJson(resource))
             .toList();
       }
+    } else {
+      resources = res['data'];
+      String encodedResources = json.encode(resources);
+      // print("online-Resources : $encodedResources");
+      await prefs.setString('resources', encodedResources);
+      isDataFetched['resources'] = true;
     }
 
     setState(() {
@@ -361,40 +289,16 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchStudents(int courseID) async {
+  Future<void> getStudents(int courseID) async {
     setState(() {
       isDataLoading['students'] = true;
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    dynamic token = prefs.getString("jwt");
-
-    bool isError = false;
     List<Customer> students = [];
-    try {
-      final response = await http.get(
-          Uri.parse('$serverDomain/api/courses/allstudents/$courseID'),
-          headers: {'Authorization': 'Bearer $token'});
 
-      if (response.statusCode == 200) {
-        var jsonStudents = json.decode(response.body)[0];
-        students = (jsonStudents as List)
-            .map((myMap) => Customer.fromMap(myMap))
-            .toList();
-        students = students
-            .where((item) => item.customerID != stMyCustomerInfo.customerID)
-            .toList();
-        String encodedStudents = json.encode(students);
-        // print("online-Students/$courseID : $encodedStudents");
-        await prefs.setString('students/$courseID', encodedStudents);
-        isDataFetched['students/$courseID'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
+    final res = await fetchStudents(stMyCustomerInfo.customerID ?? 0, courseID);
 
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['students/$courseID'] = false;
       final encodedStudents = prefs.getString('students/$courseID');
       if (encodedStudents != null && encodedStudents != "") {
@@ -404,6 +308,12 @@ class _RootPageState extends State<RootPage> {
             .map((student) => Customer.fromJson(student))
             .toList();
       }
+    } else {
+      students = res['data'];
+      String encodedStudents = json.encode(students);
+      // print("online-Students/$courseID : $encodedStudents");
+      await prefs.setString('students/$courseID', encodedStudents);
+      isDataFetched['students/$courseID'] = true;
     }
 
     setState(() {
@@ -412,42 +322,30 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchSoas() async {
+  Future<void> getSoas() async {
     setState(() {
       isDataLoading['soas'] = true;
     });
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    dynamic token = prefs.getString("jwt");
-
-    bool isError = false;
     List<SOA> soas = [];
-    try {
-      final soaRes = await http.get(
-          Uri.parse('$serverDomain/api/customers/mysoa'),
-          headers: {'Authorization': 'Bearer $token'});
 
-      var jsonSoas = json.decode(soaRes.body)[0];
-      if (soaRes.statusCode == 200) {
-        soas = (jsonSoas as List).map((myMap) => SOA.fromMap(myMap)).toList();
-        String encodedSoas = json.encode(soas);
-        // print("online-Soas : $encodedSoas");
-        await prefs.setString('soas', encodedSoas);
-        isDataFetched['soas'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
+    final res = await fetchSoas();
 
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['soas'] = false;
       final encodedSoas = prefs.getString('soas');
       if (encodedSoas != null && encodedSoas != "") {
-        // print("offline-Soas : $encodedSoas");
+        print("offline-Soas : $encodedSoas");
         var decodedSoas = json.decode(encodedSoas);
         soas = (decodedSoas as List).map((soa) => SOA.fromJson(soa)).toList();
       }
+    } else {
+      soas = res['data'];
+      String encodedSoas = json.encode(soas);
+      print("online-Soas : $encodedSoas");
+      await prefs.setString('soas', encodedSoas);
+      isDataFetched['soas'] = true;
     }
 
     setState(() {
@@ -456,35 +354,17 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchCountries() async {
+  Future<void> getCountries() async {
     setState(() {
       isDataLoading['countries'] = true;
     });
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    bool isError = false;
     List<Country> countries = [];
-    try {
-      final countryRes =
-          await http.get(Uri.parse('$serverDomain/api/setting/countries'));
 
-      var jsonCountries = json.decode(countryRes.body)[0];
-      if (countryRes.statusCode == 200) {
-        countries = (jsonCountries as List)
-            .map((myMap) => Country.fromMap(myMap))
-            .toList();
-        String encodedCountries = json.encode(countries);
-        // print("online-Countries : $encodedCountries");
-        await prefs.setString('countries', encodedCountries);
-        isDataFetched['countries'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      isError = true;
-    }
+    final res = await fetchCountries();
 
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['countries'] = false;
       final encodedCountries = prefs.getString('countries');
       if (encodedCountries != null && encodedCountries != "") {
@@ -494,6 +374,12 @@ class _RootPageState extends State<RootPage> {
             .map((country) => Country.fromJson(country))
             .toList();
       }
+    } else {
+      countries = res['data'];
+      String encodedCountries = json.encode(countries);
+      // print("online-Countries : $encodedCountries");
+      await prefs.setString('countries', encodedCountries);
+      isDataFetched['countries'] = true;
     }
 
     setState(() {
@@ -502,38 +388,16 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> fetchMessages() async {
+  Future<void> getMessages() async {
     setState(() {
       isDataLoading['messages'] = true;
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("jwt");
-
-    bool isError = false;
     List<Message> messages = [];
-    try {
-      final messageRes = await http.get(
-          Uri.parse('$serverDomain/api/customers/getmessages'),
-          headers: {'Authorization': 'Bearer $token'});
 
-      var jsonMessages = json.decode(messageRes.body)[0];
-      if (messageRes.statusCode == 200) {
-        messages = (jsonMessages as List)
-            .map((myMap) => Message.fromMap(myMap))
-            .toList();
-        String encodedMessages = json.encode(messages);
-        print("online-Messages : $encodedMessages");
-        await prefs.setString('messages', encodedMessages);
-        isDataFetched['messages'] = true;
-      } else {
-        isError = true;
-      }
-    } catch (e) {
-      print(e);
-      isError = true;
-    }
+    final res = await fetchMessages();
 
-    if (isError) {
+    if (res['isError']) {
       isDataFetched['messages'] = false;
       final encodedMessages = prefs.getString('messages');
       if (encodedMessages != null && encodedMessages != "") {
@@ -543,6 +407,12 @@ class _RootPageState extends State<RootPage> {
             .map((msg) => Message.fromJson(msg))
             .toList();
       }
+    } else {
+      messages = res['data'];
+      String encodedMessages = json.encode(messages);
+      // print("online-Messages : $encodedMessages");
+      await prefs.setString('messages', encodedMessages);
+      isDataFetched['messages'] = true;
     }
 
     messages.sort((a, b) => b.createDate.compareTo(a.createDate));
@@ -562,9 +432,12 @@ class _RootPageState extends State<RootPage> {
         updateMessageRecipientStatus(msg.messageID, data);
         notificationApi.showNotification(
           id: msg.messageID,
-          title: "<p style='text-align: center;'>${msg.subject}</p>",
-          body: "<p style='text-align: center;'>${msg.messageBody}</p>",
+          title: "<p style='text-align: right;'>${msg.subject}</p>",
+          body: "<p style='text-align: right;'>${msg.messageBody}</p>",
         );
+        setState(() {
+          isNewMessage = true;
+        });
       }
     }
   }
@@ -750,7 +623,7 @@ class _RootPageState extends State<RootPage> {
           },
           body: jsonEncode({"recipientID": 5014, "recieptStatusID": 1}),
         );
-        fetchMessages();
+        getMessages();
         if (res.statusCode != 200) {
           isError = true;
         }
@@ -820,7 +693,7 @@ class _RootPageState extends State<RootPage> {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
-      fetchMyCustomerInfo();
+      getMyCustomerInfo();
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -892,7 +765,13 @@ class _RootPageState extends State<RootPage> {
 
   Future<void> _logOut() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.remove('myCusInfo');
+    await prefs.remove('myClasses');
+    await prefs.remove('myCourses');
+    await prefs.remove('resources');
+    await prefs.remove('soas');
+    await prefs.remove('messages');
+    await prefs.remove('jwt');
     Navigator.push(
         context, MaterialPageRoute(builder: (context) => const LoginPage()));
   }
@@ -903,13 +782,13 @@ class _RootPageState extends State<RootPage> {
     });
     Future.delayed(const Duration(seconds: 1), () async {
       await Future.wait([
-        fetchAppTheme(),
-        fetchMyCustomerInfo(),
-        fetchCountries(),
-        fetchClasses(),
-        fetchCourses(),
-        fetchResources(),
-        fetchSoas(),
+        getAppTheme(),
+        getMyCustomerInfo(),
+        getCountries(),
+        getClasses(),
+        getCourses(),
+        getResources(),
+        getSoas(),
       ]);
       setState(() {
         _isLoading = false;
@@ -966,7 +845,7 @@ class _RootPageState extends State<RootPage> {
       setState(() {
         _avatarImage = File(imageFilePath);
       });
-      fetchMyCustomerInfo();
+      getMyCustomerInfo();
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -1003,6 +882,9 @@ class _RootPageState extends State<RootPage> {
             title: item.classTitle!,
             body: "${item.classTitle} is coming in 15min!",
           );
+          setState(() {
+            isNewMessage = true;
+          });
           id++;
         }
       }
@@ -1018,7 +900,6 @@ class _RootPageState extends State<RootPage> {
 
   @override
   void initState() {
-    super.initState();
     _pageTrack.add(0);
 
     notificationApi =
@@ -1027,9 +908,17 @@ class _RootPageState extends State<RootPage> {
 
     timer = Timer.periodic(const Duration(seconds: 30), (timer) {
       checkNextRightClass(stClasses);
-      fetchMessages();
+      getMessages();
     });
-    fetchInitAppData();
+    getInitAppData();
+    
+    Workmanager().registerPeriodicTask(
+      'fetch-messages-task',
+      'fetchMessages',
+      frequency: const Duration(minutes: 15),
+      initialDelay: const Duration(seconds: 10),
+    );
+    super.initState();
   }
 
   @override
@@ -1367,7 +1256,7 @@ class _RootPageState extends State<RootPage> {
           tapIcons.length,
           (index) => BottomBarItem(tapIcons[index], tapLabels[index],
               isActive: _activePageIdx == index,
-              isNotified: index == 2,
+              isNotified: index == 2 && isNewMessage,
               color: convertHexToColor(_themes[4].labelFontColor!),
               activeColor: convertHexToColor(_themes[4].datafontColor!),
               onTap: () {
@@ -1376,7 +1265,7 @@ class _RootPageState extends State<RootPage> {
             } else {
               if (index == 1) {
                 updateChatMsgRecipientStatus(4);
-                Future.delayed(const Duration(seconds: 1), () {
+                Future.delayed(const Duration(milliseconds: 300), () {
                   _scrollController.animateTo(
                     _scrollController.position.maxScrollExtent,
                     duration: const Duration(milliseconds: 500),
@@ -1386,6 +1275,9 @@ class _RootPageState extends State<RootPage> {
               }
               if (index == 2) {
                 updateNotificationRecipientStatus(4);
+                setState(() {
+                  isNewMessage = false;
+                });
               }
               setState(() {
                 _activePageIdx = index;
@@ -1465,10 +1357,10 @@ class _RootPageState extends State<RootPage> {
                   onTap: () {
                     if (isDataFetched.containsKey('myCourses')) {
                       if (!isDataFetched['myCourses']!) {
-                        fetchCourses();
+                        getCourses();
                       }
                     } else {
-                      fetchCourses();
+                      getCourses();
                     }
                     setState(() {
                       _activePageIdx = 4;
@@ -1611,10 +1503,10 @@ class _RootPageState extends State<RootPage> {
                   onTap: () {
                     if (isDataFetched.containsKey('soas')) {
                       if (!isDataFetched['soas']!) {
-                        fetchSoas();
+                        getSoas();
                       }
                     } else {
-                      fetchSoas();
+                      getSoas();
                     }
                     setState(() {
                       _activePageIdx = 12;
@@ -1696,6 +1588,7 @@ class _RootPageState extends State<RootPage> {
                   // textDirection: TextDirection!.LTR,
                   style: TextStyle(
                     fontSize: 15,
+                    fontFamily: 'Roboto',
                     color: convertHexToColor(_themes[1].datafontColor!),
                   ),
                   decoration: InputDecoration(
@@ -1728,7 +1621,7 @@ class _RootPageState extends State<RootPage> {
                   // signIn(usernameController.text, passwordController.text);
                   if (messageToUsController.text.isNotEmpty) {
                     Map<String, dynamic> data = {
-                      "createDate": DateTime.now().toString(),
+                      "createDate": converLocal2UTC(DateTime.now().toString()),
                       "subject": "New message from Client",
                       "messageBody": messageToUsController.text,
                       "parentMessageID": 0,
@@ -1953,10 +1846,10 @@ class _RootPageState extends State<RootPage> {
                   onTap: () {
                     if (isDataFetched.containsKey('resources')) {
                       if (!isDataFetched['resources']!) {
-                        fetchResources();
+                        getResources();
                       }
                     } else {
-                      fetchResources();
+                      getResources();
                     }
                     setState(() {
                       _activePageIdx = 8;
@@ -1988,10 +1881,10 @@ class _RootPageState extends State<RootPage> {
                     int courseID = _activeCourse.courseID!;
                     if (isDataFetched.containsKey('students/$courseID')) {
                       if (!isDataFetched['students/$courseID']!) {
-                        fetchStudents(courseID);
+                        getStudents(courseID);
                       }
                     } else {
-                      fetchStudents(courseID);
+                      getStudents(courseID);
                     }
                     setState(() {
                       _activePageIdx = 10;
@@ -2802,7 +2695,7 @@ class _RootPageState extends State<RootPage> {
                     onPressed: () {
                       addClass(
                           _activeClassID,
-                          _sessionDateTime.toString(),
+                          converLocal2UTC(_sessionDateTime.toString()),
                           _sessionStartingTime.toString(),
                           int.parse(durationController.text),
                           stMyCustomerInfo.customerID!);
@@ -3525,7 +3418,7 @@ class _RootPageState extends State<RootPage> {
                         "residentCountryID": _activeCountry.countryID,
                         "passportNo": passportNoController.text,
                         "nationalIDNo": nationalIDNoController.text,
-                        "dateOfBirth": _dateOfBirth.toString(),
+                        "dateOfBirth": converLocal2UTC(_dateOfBirth.toString()),
                         "nationalCardIDNo": nationalCardIDNoController.text,
                       };
                       _updateCustomerInfo(
