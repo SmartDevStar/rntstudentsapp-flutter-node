@@ -10,7 +10,7 @@ class NullDataView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.only(top: 50),
+        padding: const EdgeInsets.only(top: 50),
         child: Text(
           text,
           style: const TextStyle(

@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:workmanager/workmanager.dart';
@@ -32,8 +34,6 @@ import 'package:rnt_app/widgets/bottombar_item.dart';
 import 'package:rnt_app/components/last_notification_section.dart';
 import 'package:rnt_app/components/sub_page_header_section.dart';
 import 'package:rnt_app/components/sub_page_list_item.dart';
-
-import 'package:rnt_app/screens/login.dart';
 
 import 'package:rnt_app/services/notification_services.dart';
 
@@ -343,7 +343,7 @@ class _RootPageState extends State<RootPage> {
     } else {
       soas = res['data'];
       String encodedSoas = json.encode(soas);
-      print("online-Soas : $encodedSoas");
+      // print("online-Soas : $encodedSoas");
       await prefs.setString('soas', encodedSoas);
       isDataFetched['soas'] = true;
     }
@@ -772,8 +772,8 @@ class _RootPageState extends State<RootPage> {
     await prefs.remove('soas');
     await prefs.remove('messages');
     await prefs.remove('jwt');
-    Navigator.push(
-        context, MaterialPageRoute(builder: (context) => const LoginPage()));
+    Navigator.pop(context);
+    Navigator.pushNamed(context, '/');
   }
 
   void _refreshPage() async {
@@ -911,13 +911,16 @@ class _RootPageState extends State<RootPage> {
       getMessages();
     });
     getInitAppData();
-    
-    Workmanager().registerPeriodicTask(
-      'fetch-messages-task',
-      'fetchMessages',
-      frequency: const Duration(minutes: 15),
-      initialDelay: const Duration(seconds: 10),
-    );
+
+    if (!kIsWeb) {
+      Workmanager().registerPeriodicTask(
+        'fetch-messages-task',
+        'fetchMessages',
+        frequency: const Duration(minutes: 15),
+        initialDelay: const Duration(seconds: 10),
+      );
+    }
+
     super.initState();
   }
 
@@ -956,9 +959,9 @@ class _RootPageState extends State<RootPage> {
             setState(() {
               _activePageIdx = _pageTrack.last;
             });
-            return false; // prevent app from closing
+            return false;
           }
-          return true; // close the app
+          return true;
         },
         child: Scaffold(
           backgroundColor: convertHexToColor(_themes[0].bgColor!),
@@ -2551,7 +2554,6 @@ class _RootPageState extends State<RootPage> {
                                   borderSide:
                                       const BorderSide(color: Colors.red))),
                           onTap: () async {
-                            final now = DateTime.now();
                             TimeOfDay? selectedTime = await showTimePicker(
                               context: context,
                               initialTime: TimeOfDay.now(),
