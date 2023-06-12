@@ -10,7 +10,9 @@ import 'package:rnt_app/utils/utils.dart';
 import 'package:rnt_app/utils/data.dart';
 import 'package:rnt_app/utils/consts.dart';
 
-import 'package:rnt_app/screens/login.dart';
+import 'package:rnt_app/components/sub_page_header_section.dart';
+
+import 'package:rnt_app/responsive.dart';
 
 class ContactUsPage extends StatefulWidget {
   const ContactUsPage({super.key});
@@ -65,8 +67,6 @@ class _ContactUsPageState extends State<ContactUsPage> {
       },
       body: jsonEncode(data),
     );
-    print(data);
-    print(res.body);
     if (res.statusCode == 200) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -77,8 +77,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
           ),
         ),
       ));
-      Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()));
+      Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -100,335 +99,388 @@ class _ContactUsPageState extends State<ContactUsPage> {
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-
-    Widget headerSection = Container(
-      margin: const EdgeInsets.only(bottom: 50.0),
-      padding:
-          const EdgeInsets.only(left: 10.0, top: 1.0, bottom: 1.0, right: 10.0),
-      color: convertHexToColor(_themes[2].bgColor!),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.all(0.0),
-              child: SizedBox(
-                height: 57,
-                width: 57,
-                child: Image.memory(
-                  base64Decode(_themes[5].fileData!.split(',').last),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Text(
-              "عضویت",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: convertHexToColor(_themes[2].labelFontColor!),
-              ),
-            ),
-          ),
-          Padding(
-              padding: EdgeInsets.zero,
-              child: SvgPicture.asset(
-                "assets/images/message.svg",
-                colorFilter: ColorFilter.mode(
-                                convertHexToColor(_themes[2].labelFontColor!),
-                                BlendMode.srcIn),
-                width: 55,
-                height: 55,
-              ))
-        ],
-      ),
-    );
-    Widget roleSelectionSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding:
-          const EdgeInsets.only(left: 30.0, top: 5.0, right: 30, bottom: 5),
-      color: const Color(0xFF323F4F),
-      child: Row(
-        children: [
-          Radio(
-            value: 'teacher',
-            groupValue: _userRole,
-            fillColor: MaterialStateProperty.all<Color>(Colors.white),
-            onChanged: _handleRadioValueChange,
-          ),
-          Expanded(
-            child: Text(
-              'استاد',
-              style: TextStyle(
-                color: convertHexToColor(_themes[1].labelFontColor!),
-                fontSize: 18,
-              ),
-            ),
-          ),
-          Radio(
-            value: 'student',
-            groupValue: _userRole,
-            fillColor: MaterialStateProperty.all<Color>(Colors.white),
-            onChanged: _handleRadioValueChange,
-          ),
-          Text(
-            'دانشجو',
-            style: TextStyle(
-              color: convertHexToColor(_themes[1].labelFontColor!),
-              fontSize: 18,
-            ),
-          ),
-        ],
-      ),
-    );
-    Widget nameSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
-      color: const Color(0xFF323F4F),
-      height: 57,
-      child: TextField(
-        controller: usernameController,
-        textAlign: TextAlign.right,
-        textAlignVertical: TextAlignVertical.bottom,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          fontSize: 18,
-          color: convertHexToColor(_themes[1].datafontColor!),
-        ),
-        decoration: InputDecoration(
-            hintText: ':نام',
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: convertHexToColor(_themes[1].bgColor!),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red)),
-            focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red))),
-      ),
-    );
-    Widget codeSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
-      color: const Color(0xFF323F4F),
-      height: 57,
-      child: TextField(
-        controller: codeController,
-        textAlign: TextAlign.right,
-        textAlignVertical: TextAlignVertical.bottom,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 18, color: convertHexToColor(_themes[1].datafontColor!),
-          ),
-        decoration: InputDecoration(
-            hintText: ':کد دانشجویی/کد استادی',
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: convertHexToColor(_themes[1].bgColor!),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red)),
-            focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red))),
-      ),
-    );
-    Widget emailSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
-      color: const Color(0xFF323F4F),
-      height: 57,
-      child: TextField(
-        controller: emailController,
-        textAlign: TextAlign.right,
-        textAlignVertical: TextAlignVertical.bottom,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-            fontSize: 18, color: convertHexToColor(_themes[1].datafontColor!)),
-        decoration: InputDecoration(
-            hintText: ':ایمیل',
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: convertHexToColor(_themes[1].bgColor!),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red)),
-            focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red))),
-      ),
-    );
-    Widget contactNoSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      padding: const EdgeInsets.only(left: 7.0, top: 7.0, right: 10, bottom: 7),
-      color: const Color(0xFF323F4F),
-      height: 57,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: contactController,
-              textAlign: TextAlign.right,
-              textAlignVertical: TextAlignVertical.bottom,
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black,
-                  fontFamily: 'Roboto',
-                ),
-              decoration: InputDecoration(
-                  hintText: 'Number',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: convertHexToColor(_themes[1].bgColor!),
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Color(0xFF323F4F))),
-                  errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red)),
-                  focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(0),
-                      borderSide: const BorderSide(color: Colors.red))),
-            ),
-          ),
-          const SizedBox(
-            width: 30,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 5),
-            child: Text(
-              ":تلفن تماس",
-              style: TextStyle(
-                color: convertHexToColor(_themes[1].labelFontColor!),
-                fontSize: 18,
-              ),
-            ),
-          )
-        ],
-      ),
-    );
-    Widget messageSection = Container(
-      margin: const EdgeInsets.only(top: 2.5, bottom: 2.5),
-      color: const Color(0xFF323F4F),
-      child: TextField(
-        controller: messageController,
-        maxLines: 3,
-        textAlign: TextAlign.right,
-        textAlignVertical: TextAlignVertical.bottom,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          fontSize: 18,
-          color: convertHexToColor(_themes[1].datafontColor!),
-        ),
-        decoration: InputDecoration(
-            hintText: 'توضیحات',
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: convertHexToColor(_themes[1].bgColor!),
-            //contentPadding: const EdgeInsets.symmetric(vertical: 40),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Color(0xFF323F4F))),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red)),
-            focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(0),
-                borderSide: const BorderSide(color: Colors.red))),
-      ),
-    );
     return Scaffold(
-      backgroundColor: const Color(0xff222A35),
-      body: ListView(
-        children: [
-          headerSection,
-          roleSelectionSection,
-          nameSection,
-          codeSection,
-          emailSection,
-          contactNoSection,
-          messageSection,
-          Container(
-            alignment: Alignment.center,
-            margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-            child: ElevatedButton(
-              onPressed: () {
-                if (
-                  usernameController.text.isNotEmpty &&
-                  codeController.text.isNotEmpty &&
-                  emailController.text.isNotEmpty &&
-                  contactController.text.isNotEmpty &&
-                  messageController.text.isNotEmpty
-                ) {
-                 Map<String, dynamic> data = {
-                   "name": usernameController.text, 
-                    "code": codeController.text,
-                    "email": emailController.text, 
-                    "contact": contactController.text, 
-                    "description": messageController.text,
-                    "type": _userRole == 'student' ? 1 : 2,
-                    "source": 1,
-                  };
-                  sendContactMessage(data); 
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(0.0),
-                ),
+      backgroundColor: convertHexToColor(_themes[0].bgColor!),
+      body: SafeArea(
+        child: Responsive(
+          mobile: _buildMobileContactUsPage(),
+          desktop: Center(
+            child: _buildDesktopContactUsPage(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactUsForm() {
+    Size size = MediaQuery.of(context).size;
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+          color: convertHexToColor(_themes[1].bgColor!),
+          child: Row(
+            children: [
+              Radio(
+                value: 'teacher',
+                groupValue: _userRole,
+                fillColor: MaterialStateProperty.all<Color>(Colors.white),
+                onChanged: _handleRadioValueChange,
               ),
-              child: Container(
-                alignment: Alignment.center,
-                height: 40.0,
-                width: size.width * 0.35,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(0.0),
-                    color: const Color(0xffffc000)),
-                padding: const EdgeInsets.all(0),
-                child: const Text(
-                  "ارسال",
-                  textAlign: TextAlign.center,
+              Expanded(
+                child: Text(
+                  'استاد',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: convertHexToColor(_themes[1].labelFontColor!),
                     fontSize: 18,
                   ),
                 ),
               ),
+              Radio(
+                value: 'student',
+                groupValue: _userRole,
+                fillColor: MaterialStateProperty.all<Color>(Colors.white),
+                onChanged: _handleRadioValueChange,
+              ),
+              Text(
+                'دانشجو',
+                style: TextStyle(
+                  color: convertHexToColor(_themes[1].labelFontColor!),
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          color: const Color(0xFF323F4F),
+          child: TextField(
+            controller: usernameController,
+            textAlign: TextAlign.right,
+            textAlignVertical: TextAlignVertical.bottom,
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+              fontSize: 18,
+              color: convertHexToColor(_themes[1].datafontColor!),
+            ),
+            decoration: InputDecoration(
+              hintText: ':نام',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
             ),
           ),
-        ],
-      ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          color: const Color(0xFF323F4F),
+          child: TextField(
+            controller: codeController,
+            textAlign: TextAlign.right,
+            textAlignVertical: TextAlignVertical.bottom,
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 18,
+              color: convertHexToColor(_themes[1].datafontColor!),
+            ),
+            decoration: InputDecoration(
+              hintText: ':کد دانشجویی/کد استادی',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          color: const Color(0xFF323F4F),
+          child: TextField(
+            controller: emailController,
+            textAlign: TextAlign.right,
+            textAlignVertical: TextAlignVertical.bottom,
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+                fontSize: 18,
+                color: convertHexToColor(_themes[1].datafontColor!)),
+            decoration: InputDecoration(
+              hintText: ':ایمیل',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          color: const Color(0xFF323F4F),
+          child: TextField(
+            controller: contactController,
+            textAlign: TextAlign.right,
+            textAlignVertical: TextAlignVertical.bottom,
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+              fontFamily: 'Roboto',
+            ),
+            decoration: InputDecoration(
+              hintText: ':تلفن تماس',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          color: const Color(0xFF323F4F),
+          child: TextField(
+            controller: messageController,
+            maxLines: 3,
+            textAlign: TextAlign.right,
+            textAlignVertical: TextAlignVertical.bottom,
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+              fontSize: 18,
+              color: convertHexToColor(_themes[1].datafontColor!),
+            ),
+            decoration: InputDecoration(
+              hintText: ':توضیحات',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+            ),
+          ),
+        ),
+        Container(
+          alignment: Alignment.center,
+          margin: const EdgeInsets.symmetric(vertical: 20),
+          child: ElevatedButton(
+            onPressed: () {
+              if (usernameController.text.isNotEmpty &&
+                  codeController.text.isNotEmpty &&
+                  emailController.text.isNotEmpty &&
+                  contactController.text.isNotEmpty &&
+                  messageController.text.isNotEmpty) {
+                Map<String, dynamic> data = {
+                  "name": usernameController.text,
+                  "code": codeController.text,
+                  "email": emailController.text,
+                  "contact": contactController.text,
+                  "description": messageController.text,
+                  "type": _userRole == 'student' ? 1 : 2,
+                  "source": 1,
+                };
+                sendContactMessage(data);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.all(0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(0.0),
+              ),
+            ),
+            child: Container(
+              alignment: Alignment.center,
+              height: 40.0,
+              width:
+                  Responsive.isMobile(context) ? size.width * 0.35 : size.width,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(0.0),
+                  color: const Color(0xffffc000)),
+              padding: const EdgeInsets.all(0),
+              child: const Text(
+                "ارسال",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileContactUsPage() {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 50.0),
+          padding: const EdgeInsets.only(
+              left: 10.0, top: 1.0, bottom: 1.0, right: 10.0),
+          color: convertHexToColor(_themes[2].bgColor!),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.all(0.0),
+                  child: SizedBox(
+                    height: 57,
+                    width: 57,
+                    child: Image.memory(
+                      base64Decode(_themes[5].fileData!.split(',').last),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  "عضویت",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: convertHexToColor(_themes[2].labelFontColor!),
+                  ),
+                ),
+              ),
+              Padding(
+                  padding: EdgeInsets.zero,
+                  child: SvgPicture.asset(
+                    "assets/images/message.svg",
+                    colorFilter: ColorFilter.mode(
+                        convertHexToColor(_themes[2].labelFontColor!),
+                        BlendMode.srcIn),
+                    width: 55,
+                    height: 55,
+                  ))
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: _buildContactUsForm(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopContactUsPage() {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 120,
+            width: 120,
+            child: Image.memory(
+              base64Decode(_themes[5].fileData!.split(',').last),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 450,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SubPageHeaderSection(
+                      title: "عضویت",
+                      svgIcon: "assets/images/message.svg",
+                      labelColor: convertHexToColor(_themes[0].labelFontColor!),
+                      dataColor: convertHexToColor(_themes[0].datafontColor!),
+                    ),
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    _buildContactUsForm(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

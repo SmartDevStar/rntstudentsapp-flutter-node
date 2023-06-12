@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
 import 'dart:convert';
@@ -9,15 +10,21 @@ import 'package:rnt_app/utils/utils.dart';
 import 'package:rnt_app/models/customer_model.dart';
 import 'package:rnt_app/models/message_model.dart';
 
-import 'package:rnt_app/screens/splash.dart';
+import 'package:rnt_app/screens/login.dart';
+import 'package:rnt_app/screens/register.dart';
+import 'package:rnt_app/screens/root.dart';
+import 'package:rnt_app/screens/contact_us.dart';
+import 'package:rnt_app/screens/password_recovery.dart';
+import 'package:rnt_app/screens/check_email.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  Workmanager().initialize(
-    callbackDispatcher,
-    isInDebugMode: true,
-  );
+    Workmanager().initialize(
+      callbackDispatcher,
+    ); 
+  }
 
   runApp(const MyApp());
 }
@@ -66,10 +73,15 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Yekan',
       ),
-      home: const SplashPage(
-        text: 'Loading...',
-        duration: 2,
-      ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/home': (context) => const RootPage(),
+        '/contact': (context) => const ContactUsPage(),
+        '/pr': (context) => const PasswordRecoveryPage(),
+        '/checkemail': (context) => const CheckEmailPage(),
+      },
     );
   }
 }

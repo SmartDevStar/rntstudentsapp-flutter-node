@@ -7,8 +7,6 @@ import 'package:rnt_app/models/theme_model.dart';
 import 'package:rnt_app/utils/utils.dart';
 import 'package:rnt_app/utils/data.dart';
 
-import 'package:rnt_app/screens/login.dart';
-
 class CheckEmailPage extends StatefulWidget {
   const CheckEmailPage({super.key});
 
@@ -68,9 +66,7 @@ class _CheckEmailPageState extends State<CheckEmailPage> {
             margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
             child: ElevatedButton(
               onPressed: () {
-                // signIn(usernameController.text, passwordController.text);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()));
+                Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(0),
@@ -86,10 +82,13 @@ class _CheckEmailPageState extends State<CheckEmailPage> {
                     borderRadius: BorderRadius.circular(0.0),
                     color: const Color(0xffffc000)),
                 padding: const EdgeInsets.all(0),
-                child: Text(
+                child: const Text(
                   "بازیابی رمز عبور",
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.displayMedium,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                  ),
                 ),
               ),
             ),
