@@ -17,15 +17,13 @@ import 'package:rnt_app/screens/contact_us.dart';
 import 'package:rnt_app/screens/password_recovery.dart';
 import 'package:rnt_app/screens/check_email.dart';
 
-void main() {
+void main() async {
   if (!kIsWeb) {
     WidgetsFlutterBinding.ensureInitialized();
-
     Workmanager().initialize(
       callbackDispatcher,
-    ); 
+    );
   }
-
   runApp(const MyApp());
 }
 

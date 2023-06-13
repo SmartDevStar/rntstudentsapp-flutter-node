@@ -68,6 +68,7 @@ class _RootPageState extends State<RootPage> {
   Country _activeCountry = Country();
   int? _activeClassID;
   File? _avatarImage;
+  Uint8List? _webImage;
 
   List<MyTheme> _themes = List.generate(
       defaultThemes.length, (index) => MyTheme.fromMap(defaultThemes[index]));
@@ -797,11 +798,11 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<String?> pickImage(ImageSource source) async {
+  Future<XFile?> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
-      return pickedFile.path;
+      return pickedFile;
     } else {
       return null;
     }
@@ -813,38 +814,39 @@ class _RootPageState extends State<RootPage> {
     int customerID = stMyCustomerInfo.customerID!;
     String url = "$serverDomain/api/customers/upload/$customerID";
 
-    final imageFilePath = await pickImage(ImageSource.gallery);
+    final imageXFile = await pickImage(ImageSource.gallery);
+    if (imageXFile == null) {
+      return;
+    }
 
-    var uploadRequest = http.MultipartRequest(
+    final uploadRequest = http.MultipartRequest(
       'POST',
       Uri.parse(url),
     );
-
-    if (imageFilePath == null) {
-      return;
-    }
-    String fileExt = imageFilePath.split('.').last;
-    String mimeType =
-        mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
-
-    uploadRequest.files.add(
-      await http.MultipartFile.fromPath(
-        'file',
-        imageFilePath,
-        contentType: MediaType.parse(mimeType),
-      ),
-    );
-
     uploadRequest.headers['Authorization'] = 'Bearer $token';
+
+    if (!kIsWeb) {
+      String imageFilePath = imageXFile.path;
+      String fileExt = imageFilePath.split('.').last;
+      String mimeType = mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';;
+      
+      uploadRequest.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          imageFilePath,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    } else {
+      _webImage = await imageXFile.readAsBytes();
+      Stream<List<int>> stream = Stream.fromIterable([_webImage!]);
+      http.MultipartFile file = http.MultipartFile('file', stream, _webImage!.length, filename: imageXFile.name, contentType: MediaType.parse(imageXFile.mimeType ?? "application/octet-stream"));
+      uploadRequest.files.add(file);
+    }
+
     var response = await uploadRequest.send();
 
-    String encodedResponse = await response.stream.bytesToString();
-    Map<String, dynamic> decodedResonese = jsonDecode(encodedResponse);
-
     if (response.statusCode == 200) {
-      setState(() {
-        _avatarImage = File(imageFilePath);
-      });
       getMyCustomerInfo();
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -857,7 +859,6 @@ class _RootPageState extends State<RootPage> {
         ),
       ));
     } else {
-      print(decodedResonese);
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -989,6 +990,7 @@ class _RootPageState extends State<RootPage> {
           : Row(
               children: [
                 Expanded(
+                  flex: 3,
                     child: Column(
                   children: [
                     Container(
@@ -1019,6 +1021,7 @@ class _RootPageState extends State<RootPage> {
                   ],
                 )),
                 Expanded(
+                  flex: 4,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 20),
                     child: Text(
@@ -1032,6 +1035,7 @@ class _RootPageState extends State<RootPage> {
                   ),
                 ),
                 Expanded(
+                  flex: 3,
                     child: Column(
                   children: [
                     Container(

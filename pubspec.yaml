@@ -42,6 +42,7 @@ dependencies:
   flutter_local_notifications: ^14.1.1
   url_launcher: ^6.1.11
   workmanager: ^0.5.1
+  flutter_native_splash: ^2.3.1
   http: ^1.0.0
 
 dev_dependencies:
@@ -103,3 +104,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+flutter_native_splash:
+  color: "#222A35"
+  image: assets/images/logo.png
+  branding: assets/images/logo.png
+  color_dark: "#222A35"
+  image_dark: assets/images/logo.png
+  branding_dark: assets/images/logo.png
+  android_12:
+    image: assets/images/logo-splash.png
+    icon_background_color: "#222A35"
+    image_dark: assets/images/logo-splash.png
+    icon_background_color_dark: "#222A35"
+  web: false
+
