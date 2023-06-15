@@ -331,6 +331,7 @@ String converLocal2UTC(String strLocalTime) {
         messages = (jsonMessages as List)
             .map((myMap) => Message.fromMap(myMap))
             .toList();
+        messages.sort((a, b) => b.createDate.compareTo(a.createDate));
       } else {
         isError = true;
       }
@@ -343,4 +344,20 @@ String converLocal2UTC(String strLocalTime) {
       'data': messages,
       'isError': isError,
     };
+  }
+
+  Future<void> updateMessageRecipientStatus(
+      int messageID, Map<String, dynamic> data) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+
+    String url = "$serverDomain/api/customers/updaterecipientstatus/$messageID";
+    await http.put(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
   }
