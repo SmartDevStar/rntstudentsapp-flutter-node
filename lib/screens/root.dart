@@ -8,6 +8,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -35,7 +36,6 @@ import 'package:rnt_app/components/last_notification_section.dart';
 import 'package:rnt_app/components/sub_page_header_section.dart';
 import 'package:rnt_app/components/sub_page_list_item.dart';
 
-import 'package:rnt_app/services/notification_services.dart';
 
 class RootPage extends StatefulWidget {
   const RootPage({Key? key}) : super(key: key);
@@ -178,8 +178,14 @@ class _RootPageState extends State<RootPage> {
     residentCountryIDController.text = myCusInfo.residentCountryID.toString();
     passportNoController.text = myCusInfo.passportNo ?? "";
     nationalIDNoController.text = myCusInfo.nationalIDNo ?? "";
-    dateOfBirthController.text =
+    try {
+       dateOfBirthController.text =
         DateFormat('dd-MM-yyyy').format(DateTime.parse(myCusInfo.dateOfBirth!));
+    } catch (e) {
+      print(e); 
+      dateOfBirthController.text = "";
+    }
+    
     nationalCardIDNoController.text = myCusInfo.nationalCardIDNo ?? "";
 
     setState(() {
@@ -416,7 +422,6 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['messages'] = true;
     }
 
-    messages.sort((a, b) => b.createDate.compareTo(a.createDate));
     setState(() {
       isDataLoading['messages'] = false;
       stMessages = messages;
@@ -431,10 +436,18 @@ class _RootPageState extends State<RootPage> {
           "recieptStatusID": 3,
         };
         updateMessageRecipientStatus(msg.messageID, data);
-        notificationApi.showNotification(
-          id: msg.messageID,
-          title: "<p style='text-align: right;'>${msg.subject}</p>",
-          body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+        // notificationApi.showNotification(
+        //   id: msg.messageID,
+        //   title: "<p style='text-align: right;'>${msg.subject}</p>",
+        //   body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+        // );
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+              id: msg.messageID,
+              channelKey: 'basic_channel',
+              title: "<p style='text-align: right;'>${msg.subject}</p>",
+              body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+          )
         );
         setState(() {
           isNewMessage = true;
@@ -542,6 +555,14 @@ class _RootPageState extends State<RootPage> {
       }
     }
     return lastNotification;
+  }
+
+  dynamic getTotalBalance(List<SOA> soas) {
+    dynamic totalBalance = 0;
+    for (SOA soa in soas) {
+      totalBalance += soa.netTotalAmount;
+    }
+    return totalBalance;
   }
 
   Future<void> addClass(
@@ -715,27 +736,6 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
-  Future<void> updateMessageRecipientStatus(
-      int messageID, Map<String, dynamic> data) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    dynamic token = prefs.getString("jwt");
-
-    String url = "$serverDomain/api/customers/updaterecipientstatus/$messageID";
-    final response = await http.put(
-      Uri.parse(url),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(data),
-    );
-    if (response.statusCode == 200) {
-      print("Successfully updated message recipient status");
-    } else {
-      print("Couldn't update message recipient status");
-    }
-  }
-
   Future<void> updateNotificationRecipientStatus(int newStatus) async {
     List<Message> notifications = getNotifications(stMessages);
     for (Message msg in notifications) {
@@ -765,6 +765,7 @@ class _RootPageState extends State<RootPage> {
   }
 
   Future<void> _logOut() async {
+    timer?.cancel();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('myCusInfo');
     await prefs.remove('myClasses');
@@ -871,22 +872,20 @@ class _RootPageState extends State<RootPage> {
 
   void checkNextRightClass(List<Class> allClasses) {
     DateTime now = DateTime.now();
-    int id = 100;
 
     for (Class item in allClasses) {
       DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
       if (now.isBefore(scheduledDate)) {
         int differenceInMinutes = scheduledDate.difference(now).inMinutes;
-        if (differenceInMinutes <= 15) {
-          notificationApi.showNotification(
-            id: id,
-            title: item.classTitle!,
-            body: "${item.classTitle} is coming in 15min!",
-          );
+        if (differenceInMinutes <= 5) {
+          // notificationApi.showNotification(
+          //   id: item.hashCode,
+          //   title: item.classTitle!,
+          //   body: "${item.classTitle} is coming in 5min!",
+          // );
           setState(() {
             isNewMessage = true;
           });
-          id++;
         }
       }
     }
@@ -902,10 +901,16 @@ class _RootPageState extends State<RootPage> {
   @override
   void initState() {
     _pageTrack.add(0);
-
-    notificationApi =
-        NotificationApi(onSelectNotification: onSelectNotification);
-    notificationApi.initApi();
+    AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
+      if (!isAllowed) {
+        AwesomeNotifications().requestPermissionToSendNotifications();
+      }
+    });
+    // AwesomeNotifications().actionStream.listen(
+    //   (ReceivedNotification receivedNotification){
+    //       Navigator.pushNamed(context, '/home');
+    //   }
+    // );
 
     timer = Timer.periodic(const Duration(seconds: 30), (timer) {
       checkNextRightClass(stClasses);
@@ -2309,6 +2314,7 @@ class _RootPageState extends State<RootPage> {
   Widget _buildFinancialStatementPage() {
     Message? lastNotification =
         getLastNotification(getNotifications(stMessages));
+    dynamic totalBalance = getTotalBalance(stSoas);
     return Column(
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
@@ -2381,7 +2387,7 @@ class _RootPageState extends State<RootPage> {
                         padding: const EdgeInsets.only(left: 10),
                         child: Text(
                           stSoas.isNotEmpty
-                              ? "${stSoas[stSoas.length - 1].netTotalAmount} Euro"
+                              ? "${totalBalance.toStringAsFixed(3)} Euro"
                               : " Euro",
                           style: TextStyle(
                               color:
@@ -2931,7 +2937,7 @@ class _RootPageState extends State<RootPage> {
               if (messageToStudentsController.text.isNotEmpty) {
                 Map<String, dynamic> data = {
                   "createDate": now.toString(),
-                  "subject": "New message from teacher",
+                  "subject": "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
                   "messageBody": messageToStudentsController.text,
                   "parentMessageID": 0,
                   "expiryDate": tenDaysLater.toString(),

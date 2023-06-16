@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
-import 'package:rnt_app/utils/consts.dart';
 import 'package:rnt_app/utils/utils.dart';
 
 import 'package:rnt_app/models/customer_model.dart';
@@ -20,13 +20,27 @@ import 'package:rnt_app/screens/check_email.dart';
 void main() async {
   if (!kIsWeb) {
     WidgetsFlutterBinding.ensureInitialized();
+    AwesomeNotifications().initialize(
+      null,
+      [
+        NotificationChannel(
+            channelKey: 'basic_channel',
+            channelName: 'Basic notifications',
+            channelDescription: 'Notification channel for basic notification',
+            defaultColor: Colors.black,
+            ledColor: Colors.white)
+      ],
+      debug: true
+    );
     Workmanager().initialize(
       callbackDispatcher,
+      // isInDebugMode: true
     );
   }
   runApp(const MyApp());
 }
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
     if (taskName == 'fetchMessages') {
@@ -38,18 +52,25 @@ void callbackDispatcher() {
         var decodedMyCusInfo = json.decode(encodedMyCusInfo);
         myCusInfo = Customer.fromJson(decodedMyCusInfo);
       }
-
       final res = await fetchMessages();
       if (!res['isError']) {
         for (Message msg in res['data']) {
           if (msg.messageStatusID == 2 &&
               msg.recieptStatusID == 1 &&
               msg.recipientID == myCusInfo.registerID) {
-            notificationApi.showNotification(
-              id: msg.messageID,
-              title: "<p style='text-align: right;'>${msg.subject}</p>",
-              body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                  id: msg.messageID,
+                  channelKey: 'basic_channel',
+                  title: "<p style='text-align: right;'>${msg.subject}</p>",
+                  body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+              )
             );
+            Map<String, dynamic> data = {
+              "recipientID": msg.recipientID,
+              "recieptStatusID": 3,
+            };
+            await updateMessageRecipientStatus(msg.messageID, data);
           }
         }
       }
