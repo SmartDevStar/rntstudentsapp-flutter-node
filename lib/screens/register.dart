@@ -80,6 +80,11 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  bool isEnglish(String text) {
+    final english = RegExp(r'^[a-zA-Z]+$');
+    return english.hasMatch(text);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -284,6 +289,16 @@ class _RegisterPageState extends State<RegisterPage> {
                   usernameController.text.isNotEmpty &&
                   emailController.text.isNotEmpty &&
                   passwordController.text.isNotEmpty) {
+                if (!isEnglish(usernameController.text)) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text(
+                      "English letter is only available..",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ));
+                  return;
+                }
                 if (passwordController.text == confirmPasswordController.text) {
                   _signUp(nameController.text, usernameController.text,
                       emailController.text, passwordController.text);

@@ -57,14 +57,13 @@ String convertUTC2Local(String strUtcTime) {
     localDateTime = utcDateTime.toLocal();
     localTimeString = localDateTime.toString();
   } catch (e) {
-    // print("$e => $strUtcTime");
     localTimeString = ""; 
   }
   
   return localTimeString;
 }
 
-String converLocal2UTC(String strLocalTime) {
+String convertLocal2UTC(String strLocalTime) {
   DateTime localTime = DateTime.parse(strLocalTime);
   Duration offset = DateTime.now().timeZoneOffset;
   DateTime utcTime = localTime.subtract(offset);
@@ -337,7 +336,6 @@ String converLocal2UTC(String strLocalTime) {
       }
     } catch (e) {
       isError = true;
-      print(e);
     }
 
     return {
