@@ -62,6 +62,7 @@ class _RootPageState extends State<RootPage> {
     'messages': false,
   };
   final List<int> _pageTrack = [];
+  List<String> _alertedSessionDateTime = [];
 
   Course _activeCourse = Course();
   Class _activeClass = Class();
@@ -436,11 +437,6 @@ class _RootPageState extends State<RootPage> {
           "recieptStatusID": 3,
         };
         updateMessageRecipientStatus(msg.messageID, data);
-        // notificationApi.showNotification(
-        //   id: msg.messageID,
-        //   title: "<p style='text-align: right;'>${msg.subject}</p>",
-        //   body: "<p style='text-align: right;'>${msg.messageBody}</p>",
-        // );
         AwesomeNotifications().createNotification(
           content: NotificationContent(
               id: msg.messageID,
@@ -582,7 +578,6 @@ class _RootPageState extends State<RootPage> {
       "sessionDeliveryStatusID": 6,
       "sessionUpdatedBy": sessionUpdatedBy,
     };
-    // print(body);
     SharedPreferences prefs = await SharedPreferences.getInstance();
     dynamic token = prefs.getString("jwt");
     final res = await http.put(
@@ -619,7 +614,6 @@ class _RootPageState extends State<RootPage> {
   Future<void> sendMessage(Map<String, dynamic> data, int target) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     dynamic token = prefs.getString("jwt");
-
     String url = "$serverDomain/api/customers/newmessage";
     bool isError = false;
 
@@ -651,9 +645,6 @@ class _RootPageState extends State<RootPage> {
         }
       } else if (target == 1) {
         int courseID = _activeCourse.courseID!;
-
-        print(courseID);
-        print(messageID);
         for (Customer item
             in stStudentsByCourseID['students/$courseID'] ?? []) {
           if (item.RegisterID != 0) {
@@ -666,7 +657,6 @@ class _RootPageState extends State<RootPage> {
               body: jsonEncode(
                   {"recipientID": item.RegisterID, "recieptStatusID": 1}),
             );
-            print(item.RegisterID);
             if (res.statusCode != 200) {
               isError = true;
             }
@@ -829,7 +819,7 @@ class _RootPageState extends State<RootPage> {
     if (!kIsWeb) {
       String imageFilePath = imageXFile.path;
       String fileExt = imageFilePath.split('.').last;
-      String mimeType = mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';;
+      String mimeType = mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
       
       uploadRequest.files.add(
         await http.MultipartFile.fromPath(
@@ -872,22 +862,34 @@ class _RootPageState extends State<RootPage> {
 
   void checkNextRightClass(List<Class> allClasses) {
     DateTime now = DateTime.now();
+    List<Class> notAlertedClasses = [];
 
     for (Class item in allClasses) {
-      DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
-      if (now.isBefore(scheduledDate)) {
-        int differenceInMinutes = scheduledDate.difference(now).inMinutes;
-        if (differenceInMinutes <= 5) {
-          // notificationApi.showNotification(
-          //   id: item.hashCode,
-          //   title: item.classTitle!,
-          //   body: "${item.classTitle} is coming in 5min!",
-          // );
-          setState(() {
-            isNewMessage = true;
-          });
+      if (!_alertedSessionDateTime.contains(item.sessionDateTime!)) {
+        notAlertedClasses.add(item);
+      }
+    }
+    print(notAlertedClasses.length);
+
+    for (Class item in notAlertedClasses) {
+      if (item.sessionDateTime != null && item.sessionDateTime != "") {
+        DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
+        if (now.isBefore(scheduledDate)) {
+          int differenceInMinutes = scheduledDate.difference(now).inMinutes;
+          if (differenceInMinutes <= 15 && (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                  id: item.classID ?? 101,
+                  channelKey: 'basic_channel',
+                  title: "تا دقایقی ئیگر",
+                  body: "${item.classTitle} at ${convertDateTimeFormat(item.sessionDateTime!, "time")}",
+              )
+            );
+            _alertedSessionDateTime.add(item.sessionDateTime!);
+          }
         }
       }
+      
     }
   }
 
@@ -924,6 +926,12 @@ class _RootPageState extends State<RootPage> {
         'fetchMessages',
         frequency: const Duration(minutes: 15),
         initialDelay: const Duration(seconds: 10),
+      );
+      Workmanager().registerPeriodicTask(
+        'fetch-classes-task',
+        'fetchClasses',
+        frequency: const Duration(minutes: 15),
+        initialDelay: const Duration(seconds: 20),
       );
     }
 
@@ -1630,10 +1638,9 @@ class _RootPageState extends State<RootPage> {
               margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
               child: ElevatedButton(
                 onPressed: () {
-                  // signIn(usernameController.text, passwordController.text);
                   if (messageToUsController.text.isNotEmpty) {
                     Map<String, dynamic> data = {
-                      "createDate": converLocal2UTC(DateTime.now().toString()),
+                      "createDate": DateTime.now().toUtc().toString(),
                       "subject": "New message from Client",
                       "messageBody": messageToUsController.text,
                       "parentMessageID": 0,
@@ -1641,6 +1648,7 @@ class _RootPageState extends State<RootPage> {
                       "isReminder": false,
                       "messageStatusID": 2,
                     };
+                    print(data);
                     sendMessage(data, 0);
                     messageToUsController.clear();
                   }
@@ -2387,7 +2395,7 @@ class _RootPageState extends State<RootPage> {
                         padding: const EdgeInsets.only(left: 10),
                         child: Text(
                           stSoas.isNotEmpty
-                              ? "${totalBalance.toStringAsFixed(3)} Euro"
+                              ? "${totalBalance.toStringAsFixed(1)} Euro"
                               : " Euro",
                           style: TextStyle(
                               color:
@@ -2707,7 +2715,7 @@ class _RootPageState extends State<RootPage> {
                     onPressed: () {
                       addClass(
                           _activeClassID,
-                          converLocal2UTC(_sessionDateTime.toString()),
+                          convertLocal2UTC(_sessionDateTime.toString()),
                           _sessionStartingTime.toString(),
                           int.parse(durationController.text),
                           stMyCustomerInfo.customerID!);
@@ -3430,7 +3438,7 @@ class _RootPageState extends State<RootPage> {
                         "residentCountryID": _activeCountry.countryID,
                         "passportNo": passportNoController.text,
                         "nationalIDNo": nationalIDNoController.text,
-                        "dateOfBirth": converLocal2UTC(_dateOfBirth.toString()),
+                        "dateOfBirth": convertLocal2UTC(_dateOfBirth.toString()),
                         "nationalCardIDNo": nationalCardIDNoController.text,
                       };
                       _updateCustomerInfo(

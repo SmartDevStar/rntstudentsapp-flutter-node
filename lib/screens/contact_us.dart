@@ -269,9 +269,9 @@ class _ContactUsPageState extends State<ContactUsPage> {
             textAlign: TextAlign.right,
             textAlignVertical: TextAlignVertical.bottom,
             textDirection: TextDirection.rtl,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: Colors.black,
+              color: convertHexToColor(_themes[1].datafontColor!),
               fontFamily: 'Roboto',
             ),
             decoration: InputDecoration(
