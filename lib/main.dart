@@ -35,7 +35,7 @@ void main() async {
     );
     Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: true
+      // isInDebugMode: true
     );
   }
   runApp(const MyApp());
@@ -89,7 +89,7 @@ void callbackDispatcher() {
                       id: item.classID ?? 101,
                       channelKey: 'basic_channel',
                       title: "تا دقایقی ئیگر",
-                      body: "${item.classTitle} at ${convertDateTimeFormat(item.sessionDateTime!, "time")}",
+                      body: item.classTitle ?? "Next class",
                   )
                 );
               }
