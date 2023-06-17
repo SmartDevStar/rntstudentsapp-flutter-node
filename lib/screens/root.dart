@@ -62,7 +62,7 @@ class _RootPageState extends State<RootPage> {
     'messages': false,
   };
   final List<int> _pageTrack = [];
-  List<String> _alertedSessionDateTime = [];
+  final List<String> _alertedSessionDateTime = [];
 
   Course _activeCourse = Course();
   Class _activeClass = Class();
@@ -869,7 +869,6 @@ class _RootPageState extends State<RootPage> {
         notAlertedClasses.add(item);
       }
     }
-    print(notAlertedClasses.length);
 
     for (Class item in notAlertedClasses) {
       if (item.sessionDateTime != null && item.sessionDateTime != "") {
@@ -882,7 +881,7 @@ class _RootPageState extends State<RootPage> {
                   id: item.classID ?? 101,
                   channelKey: 'basic_channel',
                   title: "تا دقایقی ئیگر",
-                  body: "${item.classTitle} at ${convertDateTimeFormat(item.sessionDateTime!, "time")}",
+                  body: item.classTitle ?? "Next class",
               )
             );
             _alertedSessionDateTime.add(item.sessionDateTime!);
