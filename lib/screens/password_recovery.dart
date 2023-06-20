@@ -159,7 +159,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                 fontSize: 18,
                 color: convertHexToColor(_themes[1].datafontColor!)),
             decoration: InputDecoration(
-              hintText: ':کد دانشجویی/کد استادی',
+              hintText: 'نام کاربری',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -194,7 +194,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                 fontSize: 18,
                 color: convertHexToColor(_themes[1].datafontColor!)),
             decoration: InputDecoration(
-              hintText: ':ایمیل',
+              hintText: 'ایمیل',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),

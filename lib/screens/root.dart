@@ -36,7 +36,6 @@ import 'package:rnt_app/components/last_notification_section.dart';
 import 'package:rnt_app/components/sub_page_header_section.dart';
 import 'package:rnt_app/components/sub_page_list_item.dart';
 
-
 class RootPage extends StatefulWidget {
   const RootPage({Key? key}) : super(key: key);
 
@@ -180,13 +179,13 @@ class _RootPageState extends State<RootPage> {
     passportNoController.text = myCusInfo.passportNo ?? "";
     nationalIDNoController.text = myCusInfo.nationalIDNo ?? "";
     try {
-       dateOfBirthController.text =
-        DateFormat('dd-MM-yyyy').format(DateTime.parse(myCusInfo.dateOfBirth!));
+      dateOfBirthController.text = DateFormat('dd-MM-yyyy')
+          .format(DateTime.parse(myCusInfo.dateOfBirth!));
     } catch (e) {
-      print(e); 
+      print(e);
       dateOfBirthController.text = "";
     }
-    
+
     nationalCardIDNoController.text = myCusInfo.nationalCardIDNo ?? "";
 
     setState(() {
@@ -438,13 +437,12 @@ class _RootPageState extends State<RootPage> {
         };
         updateMessageRecipientStatus(msg.messageID, data);
         AwesomeNotifications().createNotification(
-          content: NotificationContent(
-              id: msg.messageID,
-              channelKey: 'basic_channel',
-              title: "<p style='text-align: right;'>${msg.subject}</p>",
-              body: "<p style='text-align: right;'>${msg.messageBody}</p>",
-          )
-        );
+            content: NotificationContent(
+          id: msg.messageID,
+          channelKey: 'basic_channel',
+          title: "<p style='text-align: right;'>${msg.subject}</p>",
+          body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+        ));
         setState(() {
           isNewMessage = true;
         });
@@ -819,8 +817,9 @@ class _RootPageState extends State<RootPage> {
     if (!kIsWeb) {
       String imageFilePath = imageXFile.path;
       String fileExt = imageFilePath.split('.').last;
-      String mimeType = mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
-      
+      String mimeType =
+          mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
+
       uploadRequest.files.add(
         await http.MultipartFile.fromPath(
           'file',
@@ -831,7 +830,11 @@ class _RootPageState extends State<RootPage> {
     } else {
       _webImage = await imageXFile.readAsBytes();
       Stream<List<int>> stream = Stream.fromIterable([_webImage!]);
-      http.MultipartFile file = http.MultipartFile('file', stream, _webImage!.length, filename: imageXFile.name, contentType: MediaType.parse(imageXFile.mimeType ?? "application/octet-stream"));
+      http.MultipartFile file = http.MultipartFile(
+          'file', stream, _webImage!.length,
+          filename: imageXFile.name,
+          contentType: MediaType.parse(
+              imageXFile.mimeType ?? "application/octet-stream"));
       uploadRequest.files.add(file);
     }
 
@@ -875,20 +878,19 @@ class _RootPageState extends State<RootPage> {
         DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
         if (now.isBefore(scheduledDate)) {
           int differenceInMinutes = scheduledDate.difference(now).inMinutes;
-          if (differenceInMinutes <= 15 && (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
+          if (differenceInMinutes <= 15 &&
+              (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
             AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                  id: item.classID ?? 101,
-                  channelKey: 'basic_channel',
-                  title: "تا دقایقی ئیگر",
-                  body: item.classTitle ?? "Next class",
-              )
-            );
+                content: NotificationContent(
+              id: item.classID ?? 101,
+              channelKey: 'basic_channel',
+              title: "تا دقایقی دیگر",
+              body: item.classTitle ?? "Next class",
+            ));
             _alertedSessionDateTime.add(item.sessionDateTime!);
           }
         }
       }
-      
     }
   }
 
@@ -1002,36 +1004,39 @@ class _RootPageState extends State<RootPage> {
           : Row(
               children: [
                 Expanded(
-                  flex: 3,
+                    flex: 3,
                     child: Column(
-                  children: [
-                    Container(
-                      alignment: Alignment.bottomLeft,
-                      padding: const EdgeInsets.only(top: 40.0, bottom: 0),
-                      child: Text(
-                        "اخرین بروز رسانی",
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: convertHexToColor(_themes[2].labelFontColor!),
+                      children: [
+                        Container(
+                          alignment: Alignment.bottomLeft,
+                          padding: const EdgeInsets.only(top: 40.0, bottom: 0),
+                          child: Text(
+                            "اخرین بروز رسانی",
+                            style: TextStyle(
+                              fontSize: 9,
+                              color:
+                                  convertHexToColor(_themes[2].labelFontColor!),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    Container(
-                      alignment: Alignment.bottomLeft,
-                      padding: const EdgeInsets.only(top: 2.0, bottom: 0),
-                      child: Text(
-                        // "25-4-2022 15:30",
-                        DateFormat('dd-MM-yyyy hh:mm').format(DateTime.now()),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: convertHexToColor(_themes[2].datafontColor!),
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                    )
-                  ],
-                )),
+                        Container(
+                          alignment: Alignment.bottomLeft,
+                          padding: const EdgeInsets.only(top: 2.0, bottom: 0),
+                          child: Text(
+                            // "25-4-2022 15:30",
+                            DateFormat('dd-MM-yyyy hh:mm')
+                                .format(DateTime.now()),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color:
+                                  convertHexToColor(_themes[2].datafontColor!),
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Roboto',
+                            ),
+                          ),
+                        )
+                      ],
+                    )),
                 Expanded(
                   flex: 4,
                   child: Padding(
@@ -1047,216 +1052,220 @@ class _RootPageState extends State<RootPage> {
                   ),
                 ),
                 Expanded(
-                  flex: 3,
+                    flex: 3,
                     child: Column(
-                  children: [
-                    Container(
-                      alignment: Alignment.centerRight,
-                      margin: const EdgeInsets.only(top: 20, bottom: 0),
-                      child: PopupMenuButton<String>(
-                        padding: EdgeInsets.zero,
-                        color: const Color(0xFF323F4F),
-                        onSelected: (value) => {
-                          if (value == "LogOut")
-                            _logOut()
-                          else if (value == "Profile")
-                            {
-                              setState(() {
-                                _activePageIdx = 16;
-                                _pageTrack.add(16);
-                                _activeCountry = getCountryByID(stCountries,
-                                    stMyCustomerInfo.residentCountryID ?? -1);
-                              })
-                            }
-                        },
-                        icon: stMyCustomerInfo.profilePhotoWebAddress!.isEmpty
-                            ? IconTheme(
-                                data: IconThemeData(
-                                  color: convertHexToColor(
-                                      _themes[2].labelFontColor!),
-                                  size: 50,
+                      children: [
+                        Container(
+                          alignment: Alignment.centerRight,
+                          margin: const EdgeInsets.only(top: 20, bottom: 0),
+                          child: PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            color: const Color(0xFF323F4F),
+                            onSelected: (value) => {
+                              if (value == "LogOut")
+                                _logOut()
+                              else if (value == "Profile")
+                                {
+                                  setState(() {
+                                    _activePageIdx = 16;
+                                    _pageTrack.add(16);
+                                    _activeCountry = getCountryByID(
+                                        stCountries,
+                                        stMyCustomerInfo.residentCountryID ??
+                                            -1);
+                                  })
+                                }
+                            },
+                            icon:
+                                stMyCustomerInfo.profilePhotoWebAddress!.isEmpty
+                                    ? IconTheme(
+                                        data: IconThemeData(
+                                          color: convertHexToColor(
+                                              _themes[2].labelFontColor!),
+                                          size: 50,
+                                        ),
+                                        child: const Icon(Icons.person))
+                                    : CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                            stMyCustomerInfo
+                                                .profilePhotoWebAddress!),
+                                        radius: 21,
+                                      ),
+                            itemBuilder: (context) => <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                value: "name",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].datafontColor!),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 5),
+                                      child: Text(
+                                        ":نام",
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: convertHexToColor(
+                                              _themes[2].labelFontColor!),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: const Icon(Icons.person))
-                            : CircleAvatar(
-                                backgroundImage: NetworkImage(
-                                    stMyCustomerInfo.profilePhotoWebAddress!),
-                                radius: 21,
                               ),
-                        itemBuilder: (context) => <PopupMenuEntry<String>>[
-                          PopupMenuItem<String>(
-                            value: "name",
-                            height: 27,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: convertHexToColor(
-                                        _themes[2].datafontColor!),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 5),
-                                  child: Text(
-                                    ":نام",
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: convertHexToColor(
-                                          _themes[2].labelFontColor!),
+                              PopupMenuItem<String>(
+                                value: "code",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "${stMyCustomerInfo.customerCode}",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].datafontColor!),
+                                        fontFamily: 'Roboto',
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: "code",
-                            height: 27,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "${stMyCustomerInfo.customerCode}",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: convertHexToColor(
-                                        _themes[2].datafontColor!),
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 5),
-                                  child: Text(
-                                    ":کد",
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: convertHexToColor(
-                                          _themes[2].labelFontColor!),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 5),
+                                      child: Text(
+                                        ":کد",
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: convertHexToColor(
+                                              _themes[2].labelFontColor!),
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: "StudyLevel",
-                            height: 27,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "${stMyCustomerInfo.studyLevelDescription}",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: convertHexToColor(
-                                        _themes[2].datafontColor!),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 5),
-                                  child: Text(
-                                    ":مقطع",
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: convertHexToColor(
-                                          _themes[2].labelFontColor!),
+                              ),
+                              PopupMenuItem<String>(
+                                value: "StudyLevel",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "${stMyCustomerInfo.studyLevelDescription}",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].datafontColor!),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: "StudyField",
-                            height: 27,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "${stMyCustomerInfo.fieldOfStudyDescription}",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: convertHexToColor(
-                                        _themes[2].datafontColor!),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 5),
-                                  child: Text(
-                                    ":رشته",
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: convertHexToColor(
-                                          _themes[2].labelFontColor!),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 5),
+                                      child: Text(
+                                        ":مقطع",
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: convertHexToColor(
+                                              _themes[2].labelFontColor!),
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          PopupMenuItem<String>(
-                            value: "Profile",
-                            height: 27,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "اطلاعات شخصی",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: convertHexToColor(
-                                        _themes[2].labelFontColor!),
-                                  ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: "StudyField",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "${stMyCustomerInfo.fieldOfStudyDescription}",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].datafontColor!),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 5),
+                                      child: Text(
+                                        ":رشته",
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: convertHexToColor(
+                                              _themes[2].labelFontColor!),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          PopupMenuItem<String>(
-                            value: "LogOut",
-                            height: 27,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "خروج",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: convertHexToColor(
-                                        _themes[2].labelFontColor!),
-                                  ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem<String>(
+                                value: "Profile",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "اطلاعات شخصی",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].labelFontColor!),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem<String>(
+                                value: "LogOut",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "خروج",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].labelFontColor!),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ))
-                  ],
-                )),
+                        ),
+                        Container(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ))
+                      ],
+                    )),
               ],
             ),
     );
@@ -1316,7 +1325,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -1549,7 +1559,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -1611,7 +1622,7 @@ class _RootPageState extends State<RootPage> {
                     color: convertHexToColor(_themes[1].datafontColor!),
                   ),
                   decoration: InputDecoration(
-                      hintText: 'پیغام:',
+                      hintText: 'پیغام',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -1705,7 +1716,8 @@ class _RootPageState extends State<RootPage> {
                           ...List.generate(
                             notifications.length,
                             (index) => LastNotificationSection(
-                              message: notifications[index].messageBody,
+                              message:
+                                  "${notifications[index].subject}: ${notifications[index].messageBody}",
                               receivedDate: DateTime.parse(
                                   notifications[index].createDate),
                               bgColor: const Color(0xFF333F50),
@@ -1732,7 +1744,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -1761,7 +1774,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -1818,7 +1832,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -1929,7 +1944,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2000,7 +2016,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2061,7 +2078,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2130,7 +2148,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2184,7 +2203,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2192,7 +2212,7 @@ class _RootPageState extends State<RootPage> {
           ),
         SubPageHeaderSection(
           headerType: SubPageHeaderType.studentsList,
-          title: "اسامی دانشجویان",
+          title: " دانشجویان این درس",
           icon: Icons.person,
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
@@ -2201,7 +2221,7 @@ class _RootPageState extends State<RootPage> {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text(
-                  "Sorry, not allowed for students..",
+                  "این گزینه فقط برای اساتید میباشد",
                   style: TextStyle(color: Colors.red),
                 ),
               ));
@@ -2262,7 +2282,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2326,7 +2347,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2384,7 +2406,7 @@ class _RootPageState extends State<RootPage> {
                     Padding(
                         padding: EdgeInsets.zero,
                         child: Text(
-                          "مانده",
+                          "جمع",
                           style: TextStyle(
                             color: convertHexToColor(_themes[0].datafontColor!),
                             fontSize: 18,
@@ -2419,7 +2441,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2428,7 +2451,7 @@ class _RootPageState extends State<RootPage> {
         SubPageHeaderSection(
           headerType: SubPageHeaderType.addClass,
           title: "کلاس جدید",
-          courseName: "روانشناسی سلامت",
+          courseName: _activeCourse.courseDescription,
           icon: Icons.calendar_month,
           labelColor: convertHexToColor(_themes[0].labelFontColor!),
           dataColor: convertHexToColor(_themes[0].datafontColor!),
@@ -2462,7 +2485,7 @@ class _RootPageState extends State<RootPage> {
                                 color: convertHexToColor(
                                     _themes[0].labelFontColor!),
                               ),
-                              hintText: "تاریخ:",
+                              hintText: "تاریخ",
                               hintStyle:
                                   const TextStyle(color: Color(0xFF8497B0)),
                               suffixIcon: Icon(
@@ -2759,7 +2782,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2781,7 +2805,7 @@ class _RootPageState extends State<RootPage> {
                   padding: const EdgeInsets.all(100),
                   child: Center(
                     child: Text(
-                      "Joining the class instruction text",
+                      "جهت ورود به کلاس از تصب اپ مایکروسافت تیمز بر روی گوشی خود اطمینان حاصل فرمایید",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: convertHexToColor(_themes[0].datafontColor!),
@@ -2803,7 +2827,7 @@ class _RootPageState extends State<RootPage> {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text(
-                    "First install Microsoft Teams app..",
+                    "لطفا اپ مایکرویافت تمیز را نصب نمایید",
                     style: TextStyle(
                       color: Colors.red,
                     ),
@@ -2845,7 +2869,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -2890,7 +2915,7 @@ class _RootPageState extends State<RootPage> {
                         Expanded(
                           child: TextField(
                             controller: messageToStudentsController,
-                            textAlign: TextAlign.left,
+                            textAlign: TextAlign.right,
                             textAlignVertical: TextAlignVertical.bottom,
                             maxLines: 3,
                             style: const TextStyle(
@@ -2899,7 +2924,7 @@ class _RootPageState extends State<RootPage> {
                               fontFamily: 'Roboto',
                             ),
                             decoration: InputDecoration(
-                                hintText: "لاحظ بعض النص ...",
+                                hintText: "متن",
                                 hintStyle: const TextStyle(
                                     color: Color(0xFF8497B0),
                                     fontFamily: 'Roboto'),
@@ -2944,7 +2969,8 @@ class _RootPageState extends State<RootPage> {
               if (messageToStudentsController.text.isNotEmpty) {
                 Map<String, dynamic> data = {
                   "createDate": now.toString(),
-                  "subject": "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
+                  "subject":
+                      "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
                   "messageBody": messageToStudentsController.text,
                   "parentMessageID": 0,
                   "expiryDate": tenDaysLater.toString(),
@@ -2998,7 +3024,8 @@ class _RootPageState extends State<RootPage> {
       children: [
         if (stMessages.isNotEmpty && lastNotification != null)
           LastNotificationSection(
-            message: lastNotification.messageBody,
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
             receivedDate: DateTime.parse(lastNotification.createDate),
             bgColor: convertHexToColor(_themes[3].bgColor!),
             notificationColor: convertHexToColor(_themes[3].datafontColor!),
@@ -3037,7 +3064,7 @@ class _RootPageState extends State<RootPage> {
                               color:
                                   convertHexToColor(_themes[1].datafontColor!)),
                           decoration: InputDecoration(
-                              hintText: ':ایمیل',
+                              hintText: '',
                               hintStyle: TextStyle(
                                   color: convertHexToColor(
                                       _themes[1].labelFontColor!)),
@@ -3092,7 +3119,7 @@ class _RootPageState extends State<RootPage> {
                             color: Colors.white,
                           ),
                           decoration: InputDecoration(
-                              hintText: 'Phone number with prefix code..',
+                              hintText: 'با کد کشور و بدون فاصله',
                               hintStyle: const TextStyle(color: Colors.grey),
                               filled: true,
                               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -3209,7 +3236,7 @@ class _RootPageState extends State<RootPage> {
                           fontFamily: 'Roboto',
                           color: convertHexToColor(_themes[1].datafontColor!)),
                       decoration: InputDecoration(
-                          hintText: ':شماره پاسپورت',
+                          hintText: '',
                           hintStyle: TextStyle(
                               color: convertHexToColor(
                                   _themes[1].labelFontColor!)),
@@ -3260,7 +3287,7 @@ class _RootPageState extends State<RootPage> {
                           fontFamily: 'Roboto',
                           color: convertHexToColor(_themes[1].datafontColor!)),
                       decoration: InputDecoration(
-                          hintText: ':شماره شناسه ملی',
+                          hintText: 'فقط اعداد بدون فاصله',
                           hintStyle: TextStyle(
                               color: convertHexToColor(
                                   _themes[1].labelFontColor!)),
@@ -3284,7 +3311,7 @@ class _RootPageState extends State<RootPage> {
                     Padding(
                         padding: const EdgeInsets.only(right: 5.0),
                         child: Text(
-                          ':شماره شناسه ملی',
+                          ':شماره شناسنامه ',
                           style: TextStyle(
                             color:
                                 convertHexToColor(_themes[1].labelFontColor!),
@@ -3312,7 +3339,7 @@ class _RootPageState extends State<RootPage> {
                           fontFamily: 'Roboto',
                           color: convertHexToColor(_themes[1].datafontColor!)),
                       decoration: InputDecoration(
-                          hintText: ':روز تولد',
+                          hintText: 'میلادی',
                           hintStyle: TextStyle(
                               color: convertHexToColor(
                                   _themes[1].labelFontColor!)),
@@ -3365,7 +3392,7 @@ class _RootPageState extends State<RootPage> {
                     Padding(
                         padding: const EdgeInsets.only(right: 5.0),
                         child: Text(
-                          ':روز تولد',
+                          ':تاریخ تولد',
                           style: TextStyle(
                             color:
                                 convertHexToColor(_themes[1].labelFontColor!),
@@ -3392,7 +3419,7 @@ class _RootPageState extends State<RootPage> {
                           fontFamily: 'Roboto',
                           color: convertHexToColor(_themes[1].datafontColor!)),
                       decoration: InputDecoration(
-                          hintText: ':شماره کارت ملی',
+                          hintText: 'فقط اعداد بدون فاصله',
                           hintStyle: TextStyle(
                               color: convertHexToColor(
                                   _themes[1].labelFontColor!)),
@@ -3437,7 +3464,8 @@ class _RootPageState extends State<RootPage> {
                         "residentCountryID": _activeCountry.countryID,
                         "passportNo": passportNoController.text,
                         "nationalIDNo": nationalIDNoController.text,
-                        "dateOfBirth": convertLocal2UTC(_dateOfBirth.toString()),
+                        "dateOfBirth":
+                            convertLocal2UTC(_dateOfBirth.toString()),
                         "nationalCardIDNo": nationalCardIDNoController.text,
                       };
                       _updateCustomerInfo(

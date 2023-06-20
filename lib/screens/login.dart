@@ -26,7 +26,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool isAppThemeFetched = false;
 
-  List<MyTheme> _themes = defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
+  List<MyTheme> _themes =
+      defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
 
   TextEditingController usernameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
@@ -41,7 +42,8 @@ class _LoginPageState extends State<LoginPage> {
       if (res['isError']) {
         final encodedThemeData = prefs.getString('appTheme');
         if (encodedThemeData == null) {
-          themes = defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
+          themes =
+              defaultThemes.map((theme) => MyTheme.fromMap(theme)).toList();
         } else {
           var decodedThemeData = json.decode(encodedThemeData);
           themes = (decodedThemeData as List)
@@ -148,13 +150,13 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: convertHexToColor(_themes[0].bgColor!),
       body: SafeArea(
         child: isAppThemeFetched
-          ? Responsive(
-              mobile: _buildMobileLoginPage(),
-              desktop: Center(
-                child: _buildDesktopLoginPage(),
-              ),
-            )
-          : const SplashPage(text: "Loading..."),
+            ? Responsive(
+                mobile: _buildMobileLoginPage(),
+                desktop: Center(
+                  child: _buildDesktopLoginPage(),
+                ),
+              )
+            : const SplashPage(text: "Loading..."),
       ),
     );
   }
@@ -168,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
           padding:
               const EdgeInsets.only(left: 0.0, top: 5.0, right: 0, bottom: 5),
           child: Text(
-            'نام کاربری (کد دانشجویی یا استادی)',
+            'نام کاربری',
             style: TextStyle(
               color: convertHexToColor(_themes[0].labelFontColor!),
               fontSize: 18,
@@ -225,7 +227,7 @@ class _LoginPageState extends State<LoginPage> {
           padding:
               const EdgeInsets.only(left: 30.0, top: 0.0, right: 30, bottom: 8),
           child: Text(
-            'رمز پیش فرض(اتباع ایرانی کد ملی بدون خط تیره یا فاصله) (اتباع غیر ایرانی ش شناسنامه)',
+            ' ',
             style: TextStyle(
               color: convertHexToColor(_themes[0].labelFontColor!),
               fontSize: 10,
@@ -306,9 +308,7 @@ class _LoginPageState extends State<LoginPage> {
           alignment: Alignment.center,
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 0),
           child: GestureDetector(
-            onTap: () => {
-              Navigator.pushNamed(context, '/pr')
-            },
+            onTap: () => {Navigator.pushNamed(context, '/pr')},
             child: const Text(
               "بازیابی رمز عبور",
               style: TextStyle(
@@ -324,9 +324,7 @@ class _LoginPageState extends State<LoginPage> {
           alignment: Alignment.center,
           margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
           child: GestureDetector(
-            onTap: () => {
-              Navigator.pushNamed(context, '/register')
-            },
+            onTap: () => {Navigator.pushNamed(context, '/register')},
             child: const Text(
               "ثبت نام",
               style: TextStyle(
@@ -344,12 +342,10 @@ class _LoginPageState extends State<LoginPage> {
           margin:
               const EdgeInsets.only(left: 10, top: 30, right: 10, bottom: 5),
           child: const Text(
-            "در صورتی که دانشجو و یا استاد دانشگاه پیام نور مرکز بین الملل هستید و امکان ورود به سیستم  برای شما نیست درخواست  بررسی ثبت نمایید",
+            "در صورتی که برای ورود به حساب کاربری خود با مشکل مواجه هستید با ما در ارتباط باشید",
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white),
+                fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
         SizedBox(height: size.height * 0.02),
@@ -375,7 +371,7 @@ class _LoginPageState extends State<LoginPage> {
                   color: const Color(0xffffc000)),
               padding: const EdgeInsets.all(0),
               child: const Text(
-                "ثبت درخواست بررسی عدم دسترسی",
+                "ارتباط با ما",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.black,

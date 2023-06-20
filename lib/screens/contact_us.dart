@@ -166,7 +166,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
               color: convertHexToColor(_themes[1].datafontColor!),
             ),
             decoration: InputDecoration(
-              hintText: ':نام',
+              hintText: 'نام',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -203,7 +203,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
               color: convertHexToColor(_themes[1].datafontColor!),
             ),
             decoration: InputDecoration(
-              hintText: ':کد دانشجویی/کد استادی',
+              hintText: 'کد دانشجویی/کد استادی',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -238,7 +238,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
                 fontSize: 18,
                 color: convertHexToColor(_themes[1].datafontColor!)),
             decoration: InputDecoration(
-              hintText: ':ایمیل',
+              hintText: 'ایمیل',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -275,7 +275,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
               fontFamily: 'Roboto',
             ),
             decoration: InputDecoration(
-              hintText: ':تلفن تماس',
+              hintText: 'تلفن تماس',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -312,7 +312,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
               color: convertHexToColor(_themes[1].datafontColor!),
             ),
             decoration: InputDecoration(
-              hintText: ':توضیحات',
+              hintText: 'توضیحات',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
@@ -413,7 +413,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
-                  "عضویت",
+                  "ارتباط با ما",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -465,7 +465,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SubPageHeaderSection(
-                      title: "عضویت",
+                      title: "ارتباط با ما",
                       svgIcon: "assets/images/message.svg",
                       labelColor: convertHexToColor(_themes[0].labelFontColor!),
                       dataColor: convertHexToColor(_themes[0].datafontColor!),

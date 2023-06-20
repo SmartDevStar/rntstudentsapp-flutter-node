@@ -22,17 +22,16 @@ void main() async {
   if (!kIsWeb) {
     WidgetsFlutterBinding.ensureInitialized();
     AwesomeNotifications().initialize(
-      null,
-      [
-        NotificationChannel(
-            channelKey: 'basic_channel',
-            channelName: 'Basic notifications',
-            channelDescription: 'Notification channel for basic notification',
-            defaultColor: Colors.black,
-            ledColor: Colors.white)
-      ],
-      debug: true
-    );
+        null,
+        [
+          NotificationChannel(
+              channelKey: 'basic_channel',
+              channelName: 'Basic notifications',
+              channelDescription: 'Notification channel for basic notification',
+              defaultColor: Colors.black,
+              ledColor: Colors.white)
+        ],
+        debug: true);
     Workmanager().initialize(
       callbackDispatcher,
       // isInDebugMode: true
@@ -59,13 +58,12 @@ void callbackDispatcher() {
               msg.recieptStatusID == 1 &&
               msg.recipientID == myCusInfo.registerID) {
             AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                  id: msg.messageID,
-                  channelKey: 'basic_channel',
-                  title: "<p style='text-align: right;'>${msg.subject}</p>",
-                  body: "<p style='text-align: right;'>${msg.messageBody}</p>",
-              )
-            );
+                content: NotificationContent(
+              id: msg.messageID,
+              channelKey: 'basic_channel',
+              title: "<p style='text-align: right;'>${msg.subject}</p>",
+              body: "<p style='text-align: right;'>${msg.messageBody}</p>",
+            ));
             Map<String, dynamic> data = {
               "recipientID": msg.recipientID,
               "recieptStatusID": 3,
@@ -74,24 +72,24 @@ void callbackDispatcher() {
           }
         }
       }
-    } else if(taskName == "fetchClasses") {
-      DateTime now  = DateTime.now();
+    } else if (taskName == "fetchClasses") {
+      DateTime now = DateTime.now();
       final res = await fetchClasses();
       if (!res['isError']) {
         for (Class item in res['data']) {
-          if (item.sessionDateTime != null && item.sessionDateTime !="") {
+          if (item.sessionDateTime != null && item.sessionDateTime != "") {
             DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
             if (now.isBefore(scheduledDate)) {
               int differenceInMinutes = scheduledDate.difference(now).inMinutes;
-              if (differenceInMinutes <= 15 && (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
+              if (differenceInMinutes <= 15 &&
+                  (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
                 AwesomeNotifications().createNotification(
-                  content: NotificationContent(
-                      id: item.classID ?? 101,
-                      channelKey: 'basic_channel',
-                      title: "تا دقایقی ئیگر",
-                      body: item.classTitle ?? "Next class",
-                  )
-                );
+                    content: NotificationContent(
+                  id: item.classID ?? 101,
+                  channelKey: 'basic_channel',
+                  title: "تا دقایقی دیگر",
+                  body: item.classTitle ?? "Next class",
+                ));
               }
             }
           }

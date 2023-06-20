@@ -132,22 +132,26 @@ class _RegisterPageState extends State<RegisterPage> {
               color: convertHexToColor(_themes[1].datafontColor!),
             ),
             decoration: InputDecoration(
-              hintText: ':نام',
+              hintText: 'نام',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: convertHexToColor(_themes[1].bgColor!),
               enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
               errorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
               focusedErrorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
             ),
           ),
         ),
@@ -164,22 +168,26 @@ class _RegisterPageState extends State<RegisterPage> {
               color: convertHexToColor(_themes[1].datafontColor!),
             ),
             decoration: InputDecoration(
-                hintText: ':نام کاربری',
-                hintStyle: const TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: convertHexToColor(_themes[1].bgColor!),
-                enabledBorder: OutlineInputBorder(
+              hintText: 'نام کاربری',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
             ),
           ),
         ),
@@ -195,22 +203,26 @@ class _RegisterPageState extends State<RegisterPage> {
                 fontSize: 18,
                 color: convertHexToColor(_themes[1].datafontColor!)),
             decoration: InputDecoration(
-                hintText: ':ایمیل',
-                hintStyle: const TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: convertHexToColor(_themes[1].bgColor!),
-                enabledBorder: OutlineInputBorder(
+              hintText: 'ایمیل',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
             ),
           ),
         ),
@@ -227,22 +239,26 @@ class _RegisterPageState extends State<RegisterPage> {
                 color: convertHexToColor(_themes[1].datafontColor!)),
             obscureText: true,
             decoration: InputDecoration(
-                hintText: ':رمز عبور',
-                hintStyle: const TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: convertHexToColor(_themes[1].bgColor!),
-                enabledBorder: OutlineInputBorder(
+              hintText: 'رمز عبور',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
             ),
           ),
         ),
@@ -259,22 +275,26 @@ class _RegisterPageState extends State<RegisterPage> {
                 color: convertHexToColor(_themes[1].datafontColor!)),
             obscureText: true,
             decoration: InputDecoration(
-                hintText: 'تأیید رمز عبور:',
-                hintStyle: const TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: convertHexToColor(_themes[1].bgColor!),
-                enabledBorder: OutlineInputBorder(
+              hintText: 'تأیید رمز عبور',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: convertHexToColor(_themes[1].bgColor!),
+              enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(0),
-                  borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
-                focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(0),
-                    borderSide: BorderSide(color: convertHexToColor(_themes[1].bgColor!))),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
+              focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(0),
+                  borderSide: BorderSide(
+                      color: convertHexToColor(_themes[1].bgColor!))),
             ),
           ),
         ),
@@ -322,7 +342,8 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Container(
               alignment: Alignment.center,
               height: 40.0,
-              width: Responsive.isMobile(context) ? size.width * 0.35 : size.width,
+              width:
+                  Responsive.isMobile(context) ? size.width * 0.35 : size.width,
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(0.0),
                   color: const Color(0xffffc000)),
@@ -346,54 +367,54 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       children: [
         Container(
-            margin: const EdgeInsets.only(bottom: 50.0),
-            padding: const EdgeInsets.only(
-                left: 10.0, top: 1.0, bottom: 1.0, right: 10.0),
-            color: convertHexToColor(_themes[2].bgColor!),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.all(0.0),
-                    child: SizedBox(
-                      height: 57,
-                      width: 57,
-                      child: Image.memory(
-                        base64Decode(_themes[5].fileData!.split(',').last),
-                      ),
+          margin: const EdgeInsets.only(bottom: 50.0),
+          padding: const EdgeInsets.only(
+              left: 10.0, top: 1.0, bottom: 1.0, right: 10.0),
+          color: convertHexToColor(_themes[2].bgColor!),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.all(0.0),
+                  child: SizedBox(
+                    height: 57,
+                    width: 57,
+                    child: Image.memory(
+                      base64Decode(_themes[5].fileData!.split(',').last),
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    "عضویت",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: convertHexToColor(_themes[2].labelFontColor!),
-                    ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  "عضویت",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: convertHexToColor(_themes[2].labelFontColor!),
                   ),
                 ),
-                Padding(
-                    padding: EdgeInsets.zero,
-                    child: SvgPicture.asset(
-                      "assets/images/register.svg",
-                      colorFilter: ColorFilter.mode(
-                          convertHexToColor(_themes[0].labelFontColor!),
-                          BlendMode.srcIn),
-                      width: 55,
-                      height: 55,
-                    ))
-              ],
-            ),
+              ),
+              Padding(
+                  padding: EdgeInsets.zero,
+                  child: SvgPicture.asset(
+                    "assets/images/register.svg",
+                    colorFilter: ColorFilter.mode(
+                        convertHexToColor(_themes[0].labelFontColor!),
+                        BlendMode.srcIn),
+                    width: 55,
+                    height: 55,
+                  ))
+            ],
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: _buildRegisterForm(),
-            ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: _buildRegisterForm(),
           ),
+        ),
       ],
     );
   }
