@@ -1,10 +1,15 @@
 import 'dart:core';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:rnt_app/firebase_options.dart';
 
 import 'package:rnt_app/utils/consts.dart';
 
@@ -15,8 +20,80 @@ import 'package:rnt_app/models/class_model.dart';
 import 'package:rnt_app/models/resource_model.dart';
 import 'package:rnt_app/models/soa_model.dart';
 import 'package:rnt_app/models/country_model.dart';
-import 'package:rnt_app/models/message_model.dart';
+import 'package:rnt_app/models/message_model.dart' as RNTMessage;
 
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await setupFlutterNotifications();
+  showFlutterNotification(message);
+}
+
+late AndroidNotificationChannel channel;
+bool isFlutterLocalNotificationsInitialized = false;
+late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+
+Future<void> setupFlutterNotifications() async {
+  if (isFlutterLocalNotificationsInitialized) {
+    return;
+  }
+  channel = const AndroidNotificationChannel(
+    'high_importance_channel',
+    'High Importance Notifications',
+    description: 'This channel is used for important notifications.',
+    importance: Importance.high,
+  );
+
+  flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  isFlutterLocalNotificationsInitialized = true;
+}
+
+void showFlutterNotification(RemoteMessage message) {
+  RemoteNotification? notification = message.notification;
+  AndroidNotification? android = message.notification?.android;
+  if (notification != null && android != null && !kIsWeb) {
+    flutterLocalNotificationsPlugin.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
+          icon: 'launch_background',
+        ),
+      ),
+    );
+  }
+}
+
+void showNotification(Map<String, String> data) {
+  flutterLocalNotificationsPlugin.show(
+      data.hashCode,
+      data['title'],
+      data['body'],
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
+          icon: 'launch_background',
+        ),
+      ),
+    );
+}
 
 Color convertHexToColor (String hexColor) {
   return Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
@@ -317,7 +394,7 @@ String convertLocal2UTC(String strLocalTime) {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("jwt");
 
-    List<Message> messages = [];
+    List<RNTMessage.Message> messages = [];
     bool isError = false;
 
     try {
@@ -328,7 +405,38 @@ String convertLocal2UTC(String strLocalTime) {
       var jsonMessages = json.decode(messageRes.body)[0];
       if (messageRes.statusCode == 200) {
         messages = (jsonMessages as List)
-            .map((myMap) => Message.fromMap(myMap))
+            .map((myMap) => RNTMessage.Message.fromMap(myMap))
+            .toList();
+        messages.sort((a, b) => b.createDate.compareTo(a.createDate));
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      isError = true;
+    }
+
+    return {
+      'data': messages,
+      'isError': isError,
+    };
+  }
+
+  Future<Map<String, dynamic>> fetchNewMessages() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("jwt");
+
+    List<RNTMessage.Message> messages = [];
+    bool isError = false;
+
+    try {
+      final messageRes = await http.get(
+          Uri.parse('$serverDomain/api/customers/getnewmessages'),
+          headers: {'Authorization': 'Bearer $token'});
+
+      var jsonMessages = json.decode(messageRes.body)[0];
+      if (messageRes.statusCode == 200) {
+        messages = (jsonMessages as List)
+            .map((myMap) => RNTMessage.Message.fromMap(myMap))
             .toList();
         messages.sort((a, b) => b.createDate.compareTo(a.createDate));
       } else {

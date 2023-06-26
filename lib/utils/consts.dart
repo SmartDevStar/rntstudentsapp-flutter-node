@@ -29,6 +29,7 @@ List<String> pageNames = [
   "JoinClass",
   "SendMsgToAllStudents",
   "Profile",
+  "UploadDocuments",
 ];
 
 enum SubPages {

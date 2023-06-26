@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "856957140303",
+    "project_id": "flutterrntstudentsapp",
+    "storage_bucket": "flutterrntstudentsapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:856957140303:android:4c67f7791eda188c6c593a",
+        "android_client_info": {
+          "package_name": "com.example.demo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "856957140303-crr044ve2safb22ls4j2g49pmbh8q8o1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpVjvrCmaxRvbNDgykwoTfYI2cb4FJQRU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "856957140303-crr044ve2safb22ls4j2g49pmbh8q8o1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "856957140303-735s6ukb54d57qqgh5ilo5girltqi1h6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.rntApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

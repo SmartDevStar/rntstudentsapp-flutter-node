@@ -553,6 +553,8 @@ class SubPageHeaderSection extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 20),
                     child: Text(
                       "پیغام به دانشحویان من",
+                      textDirection: TextDirection.rtl,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: labelColor,
                         fontSize: 14,
