@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "flutterrntstudentsapp",
+  "private_key_id": "a6981a1d227373b8b0d851766baeb545504e2d9f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCUdL8NjSJXP9vU\ncF3at+JBjktVC/e/n49GxYVRUsZOrwX3581q7y3lNoftHrrJZPjfyWE1pILd+X03\n8iuqqtSHfdLlW0WfI4JMgWdQE3Ouge/OCN/6Zx6anMp7rXme5Tb/86frK5BVPO4b\nLsjj/nf3j11Ii2NPOciHhAXsx601M6jCwGf2lHn6UBRowiQIH7RTpXYCyCzLiOEr\njUAN7goHH1ifvvmBsxMIxd7QmFE4UzjN0MuX531DmSkDeEQPILyYUnhPBzrvAtjw\nJk4wUXUG5oy62d58XaDko8Tjo50PjcRF33ueT+rtT9sRpIg/Arm6dL5XAUvPY0rE\nDQB7mAahAgMBAAECggEAD7CpEpcUhpEmvDSmDrw5iwEtgA8UP6nu/CVbGkW71MwV\nvuY+ZStjN+MECbEiP6/Ox+QiRIefFzPLorKTH+YPMUTAmeIEITYhCtHwZ9uuccak\n4Cs69N2aM/AXTGwAuyTxo6qOWEIR7phSeAgBTmtyJXV+//BPbiumwH/ZGnXeHg2u\n9qLcgQnkVkvxuWcUWhxAJAjV0/cBq1taILa18nKQzt9XnyEY9UZzLVvPy0V3/P3D\nMxh8vomxu6U+WoTSSc+tgoB3hKmp8arrFQSNVXFpbXM5qzlxRC3ZGwVBPa334g+L\nhhW3z95T+Xd/o6eidkoo1GlEFQGvyOhDGWLvb78pewKBgQDC+DnZiBRzy2+hKoTf\nrbMi+6uMtREUE4QHpaeLnw7iB6D9+BfX5mQ5LHaMUo0EmE/zBka7k0BdydxS8AwP\nwSm3YOoT8sAAd/USH41teStIndwKWc09NLSS2AN31d8e/WgJJEbn1K+MxdkcrnCx\nNiPxMzP0W9S2vBa4CARPU6LkFwKBgQDC7S5+w7bNf62mB/i3WH+XtWklY32Qas9L\nwy6etqpB+5t1v0yA2yP2FhP1ql4Kw8MHp+Bn6C2EJALM9KW9KSLS8eNIGaIuiIpu\niheLIsjbAxnhSv+2hvME0HYVZStGR4m9gqSJmiDYRqPixLp/Y1L6xayU5bDUxYja\nmMX32lbGBwKBgHukYUNjedzpIXSqezNCe3zu7x6/YQJDUhJrajIv/4c14VHN+Ijx\nUZO0b8WTQFyuntz2mPqxajtQHUn3cx62l9b0Pd3CryJc8Gy617yZ/+oAOh/STUbI\nWs9Y7/IaDnIfr89EUzcH+QAkJAh9U3f+ZpK6rvMDHYV5CEtSwjDwUDenAoGAFNN2\ndkC+1THhAa40WpJv/2t4cnAwyC9BOpz97CMkCayyLWBk8hd3viEZvNOY/Jlxyu2a\nwj9CLa4TRoaU9qLgf50sZVWnyET6VVkXrtvmjc/FAhcbPwsoB8ml9B89AmM+Sisd\nHT6EZ9cUR3QxYM7h3L0l9TqdK/524rQT4qlHQB0CgYBELJTs3lVkHkLJ2XOHoFfg\nssvDkuyOOcjp0NuaEOHCeFlypMk1TqG/tlZykzaIHqjnZRxf4J3sGcCaTqzSvpeT\nMpNkf/p6jbiO+P2T7Pcs8GsHByIeJPfqWYjv15dymet/0hRZBnOIGl+rnZkfGKbD\nSQMe5UxRTtt3oFzNEAW82Q==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-flzsc@flutterrntstudentsapp.iam.gserviceaccount.com",
+  "client_id": "116725614404622816571",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-flzsc%40flutterrntstudentsapp.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

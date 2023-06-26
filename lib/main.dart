@@ -1,15 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:workmanager/workmanager.dart';
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
-
-import 'package:rnt_app/utils/utils.dart';
-
-import 'package:rnt_app/models/customer_model.dart';
-import 'package:rnt_app/models/message_model.dart';
-import 'package:rnt_app/models/class_model.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
 
 import 'package:rnt_app/screens/login.dart';
 import 'package:rnt_app/screens/register.dart';
@@ -17,87 +9,19 @@ import 'package:rnt_app/screens/root.dart';
 import 'package:rnt_app/screens/contact_us.dart';
 import 'package:rnt_app/screens/password_recovery.dart';
 import 'package:rnt_app/screens/check_email.dart';
-
-void main() async {
-  if (!kIsWeb) {
-    WidgetsFlutterBinding.ensureInitialized();
-    AwesomeNotifications().initialize(
-        null,
-        [
-          NotificationChannel(
-              channelKey: 'basic_channel',
-              channelName: 'Basic notifications',
-              channelDescription: 'Notification channel for basic notification',
-              defaultColor: Colors.black,
-              ledColor: Colors.white)
-        ],
-        debug: true);
-    Workmanager().initialize(
-      callbackDispatcher,
-      // isInDebugMode: true
-    );
-  }
-  runApp(const MyApp());
-}
+import 'package:rnt_app/screens/student_card.dart';
 
 @pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((taskName, inputData) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final encodedMyCusInfo = prefs.getString('myCusInfo');
-    Customer myCusInfo = Customer();
-    if (encodedMyCusInfo != null && encodedMyCusInfo != "") {
-      var decodedMyCusInfo = json.decode(encodedMyCusInfo);
-      myCusInfo = Customer.fromJson(decodedMyCusInfo);
-    }
-    if (taskName == 'fetchMessages') {
-      final res = await fetchMessages();
-      if (!res['isError']) {
-        for (Message msg in res['data']) {
-          if (msg.messageStatusID == 2 &&
-              msg.recieptStatusID == 1 &&
-              msg.recipientID == myCusInfo.registerID) {
-            AwesomeNotifications().createNotification(
-                content: NotificationContent(
-              id: msg.messageID,
-              channelKey: 'basic_channel',
-              title: "<p style='text-align: right;'>${msg.subject}</p>",
-              body: "<p style='text-align: right;'>${msg.messageBody}</p>",
-            ));
-            Map<String, dynamic> data = {
-              "recipientID": msg.recipientID,
-              "recieptStatusID": 3,
-            };
-            await updateMessageRecipientStatus(msg.messageID, data);
-          }
-        }
-      }
-    } else if (taskName == "fetchClasses") {
-      DateTime now = DateTime.now();
-      final res = await fetchClasses();
-      if (!res['isError']) {
-        for (Class item in res['data']) {
-          if (item.sessionDateTime != null && item.sessionDateTime != "") {
-            DateTime scheduledDate = DateTime.parse(item.sessionDateTime!);
-            if (now.isBefore(scheduledDate)) {
-              int differenceInMinutes = scheduledDate.difference(now).inMinutes;
-              if (differenceInMinutes <= 15 &&
-                  (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
-                AwesomeNotifications().createNotification(
-                    content: NotificationContent(
-                  id: item.classID ?? 101,
-                  channelKey: 'basic_channel',
-                  title: "تا دقایقی دیگر",
-                  body: item.classTitle ?? "Next class",
-                ));
-              }
-            }
-          }
-        }
-      }
-    }
-    return Future.value(true);
-  });
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('background message ${message.notification!.body}');
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -109,7 +33,6 @@ class MyApp extends StatelessWidget {
       title: 'RNT Students App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
         fontFamily: 'Yekan',
       ),
@@ -121,6 +44,7 @@ class MyApp extends StatelessWidget {
         '/contact': (context) => const ContactUsPage(),
         '/pr': (context) => const PasswordRecoveryPage(),
         '/checkemail': (context) => const CheckEmailPage(),
+        '/studentcard': (context) => const StudentCardPage(),
       },
     );
   }

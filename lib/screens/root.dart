@@ -4,16 +4,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'package:workmanager/workmanager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 import 'package:rnt_app/models/theme_model.dart';
 import 'package:rnt_app/models/customer_model.dart';
@@ -23,6 +23,8 @@ import 'package:rnt_app/models/resource_model.dart';
 import 'package:rnt_app/models/soa_model.dart';
 import 'package:rnt_app/models/country_model.dart';
 import 'package:rnt_app/models/message_model.dart';
+
+import 'package:rnt_app/services/notification_services.dart';
 
 import 'package:rnt_app/utils/utils.dart';
 import 'package:rnt_app/utils/data.dart';
@@ -44,7 +46,9 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  Timer? timer;
+  late final NotificationApi notificationApi;
+  late FirebaseMessaging messaging;
+
   bool _isLoading = false;
   bool isNewMessage = false;
   int _activePageIdx = 0;
@@ -63,6 +67,7 @@ class _RootPageState extends State<RootPage> {
   final List<int> _pageTrack = [];
   final List<String> _alertedSessionDateTime = [];
 
+  String _fcmToken = "";
   Course _activeCourse = Course();
   Class _activeClass = Class();
   Country _activeCountry = Country();
@@ -111,6 +116,8 @@ class _RootPageState extends State<RootPage> {
     await getMessages();
     await getCountries();
     await getClasses();
+
+    await setClassScheduleNotification();
   }
 
   Future<void> getAppTheme() async {
@@ -208,7 +215,6 @@ class _RootPageState extends State<RootPage> {
       isDataFetched['myClasses'] = false;
       final encodedClasses = prefs.getString('myClasses');
       if (encodedClasses != null && encodedClasses != "") {
-        print("offline-Classes : $encodedClasses");
         var decodedClasses = json.decode(encodedClasses);
         classes = (decodedClasses as List)
             .map((classe) => Class.fromJson(classe))
@@ -217,7 +223,6 @@ class _RootPageState extends State<RootPage> {
     } else {
       classes = res['data'];
       String encodedClasses = json.encode(res['data']);
-      // print("online-Classes : $encodedClasses");
       await prefs.setString('myClasses', encodedClasses);
       isDataFetched['myClasses'] = true;
     }
@@ -436,13 +441,6 @@ class _RootPageState extends State<RootPage> {
           "recieptStatusID": 3,
         };
         updateMessageRecipientStatus(msg.messageID, data);
-        AwesomeNotifications().createNotification(
-            content: NotificationContent(
-          id: msg.messageID,
-          channelKey: 'basic_channel',
-          title: "<p style='text-align: right;'>${msg.subject}</p>",
-          body: "<p style='text-align: right;'>${msg.messageBody}</p>",
-        ));
         setState(() {
           isNewMessage = true;
         });
@@ -688,6 +686,79 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  Future<void> sendFCMToken(Map<String, dynamic> data) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+    String url = "$serverDomain/api/auth/sendtoken";
+    bool isError = false;
+
+    try {
+      final response = await http.put(
+        Uri.parse(url),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        print(response.body);
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      isError = true;
+    }
+
+    if(isError) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Could not send device token...",
+          style: TextStyle(color: Colors.red),
+        ),
+      ));
+    }
+  }
+
+  Future<void> removeFCMToken(Map<String, dynamic> data) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+    String url = "$serverDomain/api/auth/removetoken";
+    bool isError = false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        print(response.body);
+      } else {
+        isError = true;
+      }
+    } catch (e) {
+      print(e);
+      isError = true;
+    }
+
+    if(isError) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "Could not remove device token...",
+          style: TextStyle(color: Colors.red),
+        ),
+      ));
+    }
+  }
+
   Future<void> _updateCustomerInfo(
       int customerID, Map<String, dynamic> data) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -753,7 +824,11 @@ class _RootPageState extends State<RootPage> {
   }
 
   Future<void> _logOut() async {
-    timer?.cancel();
+    notificationApi.cancelAllScheduledNotification();
+    Map<String, dynamic> data = {
+      "token": _fcmToken,
+    };
+    await removeFCMToken(data);
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('myCusInfo');
     await prefs.remove('myClasses');
@@ -762,6 +837,7 @@ class _RootPageState extends State<RootPage> {
     await prefs.remove('soas');
     await prefs.remove('messages');
     await prefs.remove('jwt');
+    await prefs.remove('fcmToken');
     Navigator.pop(context);
     Navigator.pushNamed(context, '/');
   }
@@ -784,6 +860,7 @@ class _RootPageState extends State<RootPage> {
         _isLoading = false;
         _activePageIdx = 0;
       });
+      await setClassScheduleNotification();
     });
   }
 
@@ -880,13 +957,11 @@ class _RootPageState extends State<RootPage> {
           int differenceInMinutes = scheduledDate.difference(now).inMinutes;
           if (differenceInMinutes <= 15 &&
               (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
-            AwesomeNotifications().createNotification(
-                content: NotificationContent(
-              id: item.classID ?? 101,
-              channelKey: 'basic_channel',
-              title: "تا دقایقی دیگر",
-              body: item.classTitle ?? "Next class",
-            ));
+            Map<String, String> data = {
+              'title': "تا دقایقی دیگر",
+              'body': item.classTitle ?? "Next class",
+            };
+            showNotification(data);
             _alertedSessionDateTime.add(item.sessionDateTime!);
           }
         }
@@ -901,47 +976,104 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
+  Future<void> setClassScheduleNotification() async {
+    tz.TZDateTime timeZoneDateTime;
+    DateTime sessionDateTime;
+    DateTime now = DateTime.now();
+
+    await notificationApi.cancelAllScheduledNotification();
+
+    for (Class item in stClasses) {      
+      if (item.sessionDateTime != null && item.sessionDateTime != "" && 
+        (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
+        
+        sessionDateTime = DateTime.parse(item.sessionDateTime!);
+        
+        if (now.isBefore(sessionDateTime)) {
+          int differenceInMinutes = sessionDateTime.difference(now).inMinutes;
+          timeZoneDateTime = tz.TZDateTime.from(sessionDateTime, tz.local); 
+          if (differenceInMinutes > 15) {
+            timeZoneDateTime.subtract(const Duration(minutes: 15));
+          }
+          notificationApi.showScheduledNotification(
+            id: item.hashCode,
+            title: 'تا دقایقی دیگر',
+            body: item.classTitle ?? "Next class",
+            date: timeZoneDateTime,
+            payload: "",
+          ); 
+        }
+      }
+    }
+  }
+
+  Future<void> initFirebaseMessage() async {
+    messaging = FirebaseMessaging.instance;
+    final fcmToken = await messaging.getToken();
+    
+    _fcmToken = fcmToken!;
+    print("Current FCM Token: $_fcmToken");
+
+    messaging.getInitialMessage().then((value) => {
+        print(value?.data.toString())
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message){
+      print(message.notification?.body);
+      notificationApi.showNotification(
+        id: message.hashCode, 
+        title: message.notification?.title ?? "", 
+        body: message.notification?.body ?? "",
+      );
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('A new onMessageOpenedApp event was published!');
+    });
+
+    messaging.onTokenRefresh
+      .listen((fcmToken) {
+        _fcmToken = fcmToken;
+        print("New FCM Token: $fcmToken");
+        Map<String, dynamic> data = {
+          "lastUpdatedDate": DateTime.now().toUtc().toString(),
+          "token": fcmToken,
+        };
+        sendFCMToken(data);
+      })
+      .onError((err) {
+        print(err);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+            "Couldn't get FCM token...",
+            style: TextStyle(color: Colors.red),
+          ),
+        ));
+      }
+    );
+
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    print("FCM Initialization finished.");
+  }
+
   @override
   void initState() {
-    _pageTrack.add(0);
-    AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
-      if (!isAllowed) {
-        AwesomeNotifications().requestPermissionToSendNotifications();
-      }
-    });
-    // AwesomeNotifications().actionStream.listen(
-    //   (ReceivedNotification receivedNotification){
-    //       Navigator.pushNamed(context, '/home');
-    //   }
-    // );
-
-    timer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      checkNextRightClass(stClasses);
-      getMessages();
-    });
-    getInitAppData();
-
-    if (!kIsWeb) {
-      Workmanager().registerPeriodicTask(
-        'fetch-messages-task',
-        'fetchMessages',
-        frequency: const Duration(minutes: 15),
-        initialDelay: const Duration(seconds: 10),
-      );
-      Workmanager().registerPeriodicTask(
-        'fetch-classes-task',
-        'fetchClasses',
-        frequency: const Duration(minutes: 15),
-        initialDelay: const Duration(seconds: 20),
-      );
-    }
-
     super.initState();
+    _pageTrack.add(0);
+    notificationApi = NotificationApi();
+    notificationApi.initApi();
+    initFirebaseMessage();
+    getInitAppData();
   }
 
   @override
   void dispose() {
-    timer?.cancel();
+    notificationApi.cancelAllScheduledNotification();
     super.dispose();
   }
 
@@ -965,6 +1097,7 @@ class _RootPageState extends State<RootPage> {
       "JoinClass": _buildJoinClassPage(),
       "SendMsgToAllStudents": _buildSendMsgToAllStudentsPage(),
       "Profile": _buildProfilePage(),
+      "UploadDocuments": _buildUploadDocumentsPage(),
     };
 
     return WillPopScope(
@@ -1073,6 +1206,11 @@ class _RootPageState extends State<RootPage> {
                                         stCountries,
                                         stMyCustomerInfo.residentCountryID ??
                                             -1);
+                                  })
+                                } else if (value == "UploadDocuments") {
+                                  setState(() {
+                                    _activePageIdx = 17;
+                                    _pageTrack.add(17);
                                   })
                                 }
                             },
@@ -1222,6 +1360,24 @@ class _RootPageState extends State<RootPage> {
                                   children: [
                                     Text(
                                       "اطلاعات شخصی",
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: convertHexToColor(
+                                            _themes[2].labelFontColor!),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: "UploadDocuments",
+                                height: 27,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "رسال مدارک",
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                         fontSize: 15,
@@ -1541,6 +1697,50 @@ class _RootPageState extends State<RootPage> {
                       _activePageIdx = 12;
                       _pageTrack.add(12);
                     });
+                  },
+                ),
+                GestureDetector(
+                  child: Container(
+                    color: const Color(0xFF333F50),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 18),
+                    margin: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.zero,
+                                child: Text(
+                                  "کارت دانشجویی",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 21,
+                                    color: convertHexToColor(
+                                        _themes[0].labelFontColor!),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.zero,
+                          child: IconTheme(
+                            data: IconThemeData(
+                              color: convertHexToColor(
+                                  _themes[0].labelFontColor!),
+                              size: 30,
+                            ),
+                            child: const Icon(Icons.contact_mail),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/studentcard');
                   },
                 ),
               ],
@@ -3497,6 +3697,205 @@ class _RootPageState extends State<RootPage> {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUploadDocumentsPage() {
+    Message? lastNotification =
+        getLastNotification(getNotifications(stMessages));
+    return Column(
+      children: [
+        if (stMessages.isNotEmpty && lastNotification != null)
+          LastNotificationSection(
+            message:
+                "${lastNotification.subject}: ${lastNotification.messageBody}",
+            receivedDate: DateTime.parse(lastNotification.createDate),
+            bgColor: convertHexToColor(_themes[3].bgColor!),
+            notificationColor: convertHexToColor(_themes[3].datafontColor!),
+            labelColor: convertHexToColor(_themes[3].labelFontColor!),
+          ),
+        SubPageHeaderSection(
+          title: "ارسال مدارک",
+          icon: Icons.message,
+          svgIcon: "assets/images/message.svg",
+          labelColor: convertHexToColor(_themes[0].labelFontColor!),
+          dataColor: convertHexToColor(_themes[0].datafontColor!),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+                      child: Text(
+                        "توضیحات مدرک",
+                        style: TextStyle(
+                          color: convertHexToColor(_themes[0].labelFontColor!),
+                          fontSize: 22,
+                        )
+                      ) 
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        child: Container(
+                          color: const Color(0xff8296b0),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 17.0,),
+                            child: Text(
+                              "فایلی انتخاب نشده",
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        onTap: () {
+                          print("tapped!");
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        color: const Color(0xFF333F50),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 17.0,),
+                          child: Text(
+                            "File description",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(
+                  height: 5,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        child: Container(
+                          color: const Color(0xff8296b0),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 17.0,),
+                            child: Text(
+                              "فایلی انتخاب نشده",
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        onTap: () {
+                          
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        color: const Color(0xFF333F50),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 17.0,),
+                          child: Text(
+                            "File description",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(
+                  height: 5,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        child: Container(
+                          color: const Color(0xff8296b0),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 17.0,),
+                            child: Text(
+                              "فایلی انتخاب نشده",
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        onTap: () {
+                          
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        color: const Color(0xFF333F50),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 17.0,),
+                          child: Text(
+                            "File description",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(
+                  height: 30,
+                ),
+                Container(
+                  alignment: Alignment.center,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
+                  child: ElevatedButton(
+                    onPressed: () {
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(0.0),
+                      ),
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      height: 40.0,
+                      width: 150,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(0.0),
+                          color: const Color(0xffffc000)),
+                      padding: const EdgeInsets.all(0),
+                      child: const Text(
+                        "ارسال",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
         ),
       ],
     );
