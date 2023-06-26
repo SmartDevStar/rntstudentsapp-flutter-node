@@ -49,6 +49,7 @@ class _RootPageState extends State<RootPage> {
   late final NotificationApi notificationApi;
   late FirebaseMessaging messaging;
 
+  Timer? timer;
   bool _isLoading = false;
   bool isNewMessage = false;
   int _activePageIdx = 0;
@@ -635,6 +636,7 @@ class _RootPageState extends State<RootPage> {
           },
           body: jsonEncode({"recipientID": 5014, "recieptStatusID": 1}),
         );
+        print("Call getMessage()");
         getMessages();
         if (res.statusCode != 200) {
           isError = true;
@@ -1008,11 +1010,21 @@ class _RootPageState extends State<RootPage> {
   }
 
   Future<void> initFirebaseMessage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     messaging = FirebaseMessaging.instance;
     final fcmToken = await messaging.getToken();
     
     _fcmToken = fcmToken!;
     print("Current FCM Token: $_fcmToken");
+    final prefsFCMToken = prefs.getString('fcmToken');
+    if (prefsFCMToken == null || prefsFCMToken == '') {
+      await prefs.setString('fcmToken', _fcmToken);
+      Map<String, dynamic> data = {
+        "lastUpdatedDate": DateTime.now().toUtc().toString(),
+        "token": fcmToken,
+      };
+      sendFCMToken(data);
+    }
 
     messaging.getInitialMessage().then((value) => {
         print(value?.data.toString())
@@ -1031,28 +1043,6 @@ class _RootPageState extends State<RootPage> {
       print('A new onMessageOpenedApp event was published!');
     });
 
-    messaging.onTokenRefresh
-      .listen((fcmToken) {
-        _fcmToken = fcmToken;
-        print("New FCM Token: $fcmToken");
-        Map<String, dynamic> data = {
-          "lastUpdatedDate": DateTime.now().toUtc().toString(),
-          "token": fcmToken,
-        };
-        sendFCMToken(data);
-      })
-      .onError((err) {
-        print(err);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-            "Couldn't get FCM token...",
-            style: TextStyle(color: Colors.red),
-          ),
-        ));
-      }
-    );
-
     await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
@@ -1069,11 +1059,15 @@ class _RootPageState extends State<RootPage> {
     notificationApi.initApi();
     initFirebaseMessage();
     getInitAppData();
+    timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      getMessages();
+    });
   }
 
   @override
   void dispose() {
     notificationApi.cancelAllScheduledNotification();
+    timer?.cancel();
     super.dispose();
   }
 
@@ -3168,12 +3162,12 @@ class _RootPageState extends State<RootPage> {
 
               if (messageToStudentsController.text.isNotEmpty) {
                 Map<String, dynamic> data = {
-                  "createDate": now.toString(),
+                  "createDate": now.toUtc().toString(),
                   "subject":
                       "${stMyCustomerInfo.FirstName} ${stMyCustomerInfo.LastName}",
                   "messageBody": messageToStudentsController.text,
                   "parentMessageID": 0,
-                  "expiryDate": tenDaysLater.toString(),
+                  "expiryDate": tenDaysLater.toUtc().toString(),
                   "isReminder": true,
                   "messageStatusID": 2,
                 };
