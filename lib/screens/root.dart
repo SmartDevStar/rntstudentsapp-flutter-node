@@ -1054,6 +1054,7 @@ class _RootPageState extends State<RootPage> {
   @override
   void initState() {
     super.initState();
+    
     _pageTrack.add(0);
     notificationApi = NotificationApi();
     notificationApi.initApi();
@@ -1734,7 +1735,8 @@ class _RootPageState extends State<RootPage> {
                     ),
                   ),
                   onTap: () {
-                    Navigator.pushNamed(context, '/studentcard');
+                    // Navigator.pushNamed(context, '/studentcard');
+                    Navigator.pushNamed(context, '/certificate');
                   },
                 ),
               ],
