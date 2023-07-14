@@ -102,7 +102,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                   svgIcon!,
                                   width: 50,
                                   height: 50,
-                                  colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                  colorFilter: ColorFilter.mode(
+                                      labelColor, BlendMode.srcIn),
                                 ),
                         )
                       : svgIcon == null || svgIcon!.isEmpty
@@ -111,7 +112,8 @@ class SubPageHeaderSection extends StatelessWidget {
                               svgIcon!,
                               width: 50,
                               height: 50,
-                              colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                              colorFilter:
+                                  ColorFilter.mode(labelColor, BlendMode.srcIn),
                             ),
                 ),
               ),
@@ -147,22 +149,40 @@ class SubPageHeaderSection extends StatelessWidget {
             ),
             GestureDetector(
               onTap: onHeaderIconClicked,
-              child: avatarImage == null
-                  ? avatarAddress!.isEmpty
-                      ? IconTheme(
-                          data: IconThemeData(
-                            color: labelColor,
-                            size: 25,
-                          ),
-                          child: const Icon(Icons.person))
+              child: Stack(
+                children: [
+                  avatarImage == null
+                      ? avatarAddress!.isEmpty
+                          ? IconTheme(
+                              data: IconThemeData(
+                                color: labelColor,
+                                size: 25,
+                              ),
+                              child: const Icon(Icons.person))
+                          : CircleAvatar(
+                              backgroundImage: NetworkImage(avatarAddress!),
+                              radius: 25,
+                            )
                       : CircleAvatar(
-                          backgroundImage: NetworkImage(avatarAddress!),
+                          backgroundImage: FileImage(avatarImage!),
                           radius: 25,
-                        )
-                  : CircleAvatar(
-                      backgroundImage: FileImage(avatarImage!),
-                      radius: 25,
+                        ),
+                  const Positioned(
+                    top: 0.0,
+                    right: 0.0,
+                    left: 15.0,
+                    bottom: 5.0,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 20),
+                      child: Icon(
+                        Icons.edit,
+                        size: 37.0,
+                        color: Colors.blueGrey,
+                      ),
                     ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -316,7 +336,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                 svgIcon!,
                                 width: 50,
                                 height: 50,
-                                colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                colorFilter: ColorFilter.mode(
+                                    labelColor, BlendMode.srcIn),
                               ),
                       )
                     : svgIcon == null || svgIcon!.isEmpty
@@ -325,7 +346,8 @@ class SubPageHeaderSection extends StatelessWidget {
                             svgIcon!,
                             width: 50,
                             height: 50,
-                            colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                            colorFilter:
+                                ColorFilter.mode(labelColor, BlendMode.srcIn),
                           ),
               ),
             ),
@@ -361,9 +383,11 @@ class SubPageHeaderSection extends StatelessWidget {
                         "assets/images/plus.svg",
                         width: 50,
                         height: 50,
-                        colorFilter: headerType == SubPageHeaderType.myClassSchedule
-                        ? const ColorFilter.mode(Colors.green, BlendMode.srcIn)
-                        : ColorFilter.mode(labelColor, BlendMode.srcIn),
+                        colorFilter:
+                            headerType == SubPageHeaderType.myClassSchedule
+                                ? const ColorFilter.mode(
+                                    Colors.green, BlendMode.srcIn)
+                                : ColorFilter.mode(labelColor, BlendMode.srcIn),
                       ),
                     ),
                   ),
@@ -426,7 +450,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                       svgIcon!,
                                       width: 50,
                                       height: 50,
-                                      colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                      colorFilter: ColorFilter.mode(
+                                          labelColor, BlendMode.srcIn),
                                     ),
                             )
                           : svgIcon == null || svgIcon!.isEmpty
@@ -435,7 +460,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                   svgIcon!,
                                   width: 50,
                                   height: 50,
-                                  colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                  colorFilter: ColorFilter.mode(
+                                      labelColor, BlendMode.srcIn),
                                 ),
                     ),
                   ),
@@ -505,7 +531,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                 svgIcon!,
                                 width: 50,
                                 height: 50,
-                                colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                colorFilter: ColorFilter.mode(
+                                    labelColor, BlendMode.srcIn),
                               ),
                       )
                     : svgIcon == null || svgIcon!.isEmpty
@@ -514,7 +541,8 @@ class SubPageHeaderSection extends StatelessWidget {
                             svgIcon!,
                             width: 50,
                             height: 50,
-                            colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                            colorFilter:
+                                ColorFilter.mode(labelColor, BlendMode.srcIn),
                           ),
               ),
             ),
@@ -545,7 +573,8 @@ class SubPageHeaderSection extends StatelessWidget {
                         "assets/images/message.svg",
                         width: 50,
                         height: 50,
-                        colorFilter: const ColorFilter.mode(Colors.green, BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(
+                            Colors.green, BlendMode.srcIn),
                       ),
                     ),
                   ),
@@ -594,7 +623,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                     svgIcon!,
                                     width: 50,
                                     height: 50,
-                                    colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                    colorFilter: ColorFilter.mode(
+                                        labelColor, BlendMode.srcIn),
                                   ),
                           )
                         : svgIcon == null || svgIcon!.isEmpty
@@ -603,7 +633,8 @@ class SubPageHeaderSection extends StatelessWidget {
                                 svgIcon!,
                                 width: 50,
                                 height: 50,
-                                colorFilter: ColorFilter.mode(labelColor, BlendMode.srcIn),
+                                colorFilter: ColorFilter.mode(
+                                    labelColor, BlendMode.srcIn),
                               ),
                   ),
                 ),

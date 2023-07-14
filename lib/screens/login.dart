@@ -222,19 +222,19 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-        Container(
-          alignment: Alignment.center,
-          padding:
-              const EdgeInsets.only(left: 30.0, top: 0.0, right: 30, bottom: 8),
-          child: Text(
-            ' ',
-            style: TextStyle(
-              color: convertHexToColor(_themes[0].labelFontColor!),
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
+        // Container(
+        //   alignment: Alignment.center,
+        //   padding:
+        //       const EdgeInsets.only(left: 30.0, top: 0.0, right: 30, bottom: 8),
+        //   child: Text(
+        //     ' ',
+        //     style: TextStyle(
+        //       color: convertHexToColor(_themes[0].labelFontColor!),
+        //       fontSize: 10,
+        //     ),
+        //     textAlign: TextAlign.center,
+        //   ),
+        // ),
         Container(
           alignment: Alignment.center,
           height: 35,

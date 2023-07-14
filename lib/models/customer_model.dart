@@ -33,6 +33,9 @@ class Customer {
   bool? inActive;
   bool? onHold;
   String? profilePhotoWebAddress;
+  String? englishFirstName;
+  String? englishLastName;
+  String? fieldOfStudyDescriptionEnglish;
 
   Customer({
     this.customerID = 0,
@@ -67,6 +70,9 @@ class Customer {
     this.RegisterID = 0,
     this.loginEmailAddress = "",
     this.profilePhotoWebAddress = "",
+    this.englishFirstName = "",
+    this.englishLastName = "",
+    this.fieldOfStudyDescriptionEnglish = "",
   });
 
   factory Customer.fromMap(Map<String, dynamic> map) {
@@ -103,6 +109,10 @@ class Customer {
       RegisterID: map['RegisterID'] ?? 0,
       loginEmailAddress: map['loginEmailAddress'] ?? "",
       profilePhotoWebAddress: map['profilePhotoWebAddress'] ?? "",
+      englishFirstName: map['englishFirstName'] ?? "",
+      englishLastName: map['englishLastName'] ?? "",
+      fieldOfStudyDescriptionEnglish:
+          map['fieldOfStudyDescriptionEnglish'] ?? "",
     );
   }
 
@@ -140,6 +150,9 @@ class Customer {
       'RegisterID': RegisterID,
       'loginEmailAddress': loginEmailAddress,
       'profilePhotoWebAddress': profilePhotoWebAddress,
+      'englishFirstName': englishFirstName,
+      'englishLastName': englishLastName,
+      'fieldOfStudyDescriptionEnglish': fieldOfStudyDescriptionEnglish,
     };
   }
 

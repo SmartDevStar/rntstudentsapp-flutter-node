@@ -100,9 +100,9 @@ List<Color> colorOfClassStates = [
 ];
 
 List<Map<String, String>> countryCodes = [
-  { 'country':  'United Arab Emirates', 'countryCode': '+971' },
-  { 'country':  'Norway', 'countryCode': '+47' },
-  { 'country':  'Chile', 'countryCode': '+56' },
+  {'country': 'United Arab Emirates', 'countryCode': '+971'},
+  {'country': 'Norway', 'countryCode': '+47'},
+  {'country': 'Chile', 'countryCode': '+56'},
 ];
 
 final Map<String, String> mimeTypes = {
@@ -114,4 +114,9 @@ final Map<String, String> mimeTypes = {
   'svg': 'image/svg+xml',
   'bmp': 'image/bmp',
   'tiff': 'image/tiff',
+  'pdf': 'application/pdf',
+  'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'doc': 'application/msword',
+  'docx':
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };

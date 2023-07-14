@@ -1,244 +1,275 @@
 import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rnt_app/models/customer_model.dart';
 
+Future<Customer> getMyCusInfo() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  Customer myCusInfo = Customer();
+  final encodedMyCusInfo = prefs.getString('myCusInfo');
+  if (encodedMyCusInfo != null && encodedMyCusInfo != "") {
+    var decodedMyCusInfo = json.decode(encodedMyCusInfo);
+    myCusInfo = Customer.fromJson(decodedMyCusInfo);
+  }
+  return myCusInfo;
+}
 
-Future<Uint8List> generateCertificate(PdfPageFormat pageFormat) async {
-  final lorem = pw.LoremText();
+Future<Uint8List> generateCertificate(
+    PdfPageFormat pageFormat, String lan) async {
+  final myCusInfo = await getMyCusInfo();
   final pdf = pw.Document();
+
+  final ByteData fontData = await rootBundle.load('assets/fonts/0_Yekan.ttf');
+  final pw.Font font = pw.Font.ttf(fontData.buffer.asByteData());
 
   final libreBaskerville = await PdfGoogleFonts.libreBaskervilleRegular();
   final libreBaskervilleItalic = await PdfGoogleFonts.libreBaskervilleItalic();
   final libreBaskervilleBold = await PdfGoogleFonts.libreBaskervilleBold();
-  final robotoLight = await PdfGoogleFonts.robotoLight();
-  final medail = await rootBundle.loadString('assets/images/medail.svg');
-  final swirls = await rootBundle.loadString('assets/images/swirls.svg');
-  final swirls1 = await rootBundle.loadString('assets/images/swirls1.svg');
-  final swirls2 = await rootBundle.loadString('assets/images/swirls2.svg');
-  final swirls3 = await rootBundle.loadString('assets/images/swirls3.svg');
-  final garland = await rootBundle.loadString('assets/images/garland.svg');
+  final netEnImage = await networkImage(
+      'http://pnuglobal.dyndns.org:9001/uploads/files/idcardenglish.jpg');
+  final netFaImage = await networkImage(
+      'http://pnuglobal.dyndns.org:9001/uploads/files/idcardfarsi.jpg');
+  final netProfileImage =
+      await networkImage(myCusInfo.profilePhotoWebAddress ?? "");
+  final netBackImage = lan == 'En' ? netFaImage : netEnImage;
 
-  pdf.addPage(
-    pw.Page(
-      build: (context) => pw.Column(
-        children: [
-          pw.Spacer(flex: 2),
-          pw.RichText(
-            text: pw.TextSpan(
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 25,
+  if (lan == "En") {
+    pdf.addPage(
+      pw.Page(
+        build: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.only(
+            top: 155,
+            left: 60,
+            right: 120,
+            bottom: 10,
+          ),
+          child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(top: -135, right: 60),
+                  child: pw.Image(netProfileImage,
+                      fit: pw.BoxFit.fill, width: 190, height: 230),
                 ),
-                children: [
-                  const pw.TextSpan(text: 'CERTIFICATE '),
-                  pw.TextSpan(
-                    text: 'of',
-                    style: pw.TextStyle(
-                      fontStyle: pw.FontStyle.italic,
-                      fontWeight: pw.FontWeight.normal,
-                    ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(
+                    top: 130,
                   ),
-                  const pw.TextSpan(text: ' ACHIEVEMENT'),
-                ]),
-          ),
-          pw.Spacer(),
-          pw.Text(
-            'THIS ACKNOWLEDGES THAT',
-            style: pw.TextStyle(
-              font: robotoLight,
-              fontSize: 10,
-              letterSpacing: 2,
-              wordSpacing: 2,
-            ),
-          ),
-          pw.SizedBox(
-            width: 300,
-            child: pw.Divider(color: PdfColors.grey, thickness: 1.5),
-          ),
-          pw.Text(
-            "Pavlo R",
-            textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          pw.SizedBox(
-            width: 300,
-            child: pw.Divider(color: PdfColors.grey, thickness: 1.5),
-          ),
-          pw.Text(
-            'HAS SUCCESSFULLY COMPLETED THE',
-            style: pw.TextStyle(
-              font: robotoLight,
-              fontSize: 10,
-              letterSpacing: 2,
-              wordSpacing: 2,
-            ),
-          ),
-          pw.SizedBox(height: 10),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            children: [
-              pw.SvgImage(
-                svg: swirls,
-                height: 10,
-              ),
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10),
-                child: pw.Text(
-                  'Flutter PDF Demo',
-                  style: const pw.TextStyle(
-                    fontSize: 10,
-                  ),
+                  child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.start,
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(right: -30),
+                          child: pw.Text(
+                            myCusInfo.customerCode ?? 'Na',
+                            textDirection: pw.TextDirection.rtl,
+                            style: pw.TextStyle(
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(right: -100),
+                          child: pw.Text(
+                            myCusInfo.LastName ?? "",
+                            textDirection: pw.TextDirection.rtl,
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 15),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(right: 120),
+                          child: pw.Text(
+                            myCusInfo.FirstName ?? "",
+                            textDirection: pw.TextDirection.rtl,
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(right: 50),
+                          child: pw.Text(
+                            myCusInfo.fieldOfStudyDescription ?? "",
+                            textDirection: pw.TextDirection.rtl,
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 20),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(right: 20),
+                          child: pw.Text(
+                            DateFormat('d/M/y').format(DateTime.now()),
+                            textDirection: pw.TextDirection.rtl,
+                            style: pw.TextStyle(
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ]),
                 ),
-              ),
-              pw.Transform(
-                transform: Matrix4.diagonal3Values(-1, 1, 1),
-                adjustLayout: true,
-                child: pw.SvgImage(
-                  svg: swirls,
-                  height: 10,
-                ),
-              ),
-            ],
-          ),
-          pw.Spacer(),
-          pw.SvgImage(
-            svg: swirls2,
-            width: 150,
-          ),
-          pw.Spacer(),
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Flexible(
-                child: pw.Text(
-                  lorem.paragraph(40),
-                  style: const pw.TextStyle(fontSize: 6),
-                  textAlign: pw.TextAlign.justify,
-                ),
-              ),
-              pw.SizedBox(width: 100),
-              pw.SvgImage(
-                svg: medail,
-                width: 100,
-              ),
-            ],
-          ),
-        ],
-      ),
-      pageTheme: pw.PageTheme(
-        pageFormat: pageFormat,
-        theme: pw.ThemeData.withFont(
-          base: libreBaskerville,
-          italic: libreBaskervilleItalic,
-          bold: libreBaskervilleBold,
+              ]),
         ),
-        buildBackground: (context) => pw.FullPage(
-          ignoreMargins: true,
-          child: pw.Container(
-            margin: const pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(
-                  color: const PdfColor.fromInt(0xffe435), width: 1),
-            ),
-            child: pw.Container(
-              margin: const pw.EdgeInsets.all(5),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(
-                    color: const PdfColor.fromInt(0xffe435), width: 5),
-              ),
-              width: double.infinity,
-              height: double.infinity,
-              child: pw.Stack(
-                alignment: pw.Alignment.center,
-                children: [
-                  pw.Positioned(
-                    top: 5,
-                    child: pw.SvgImage(
-                      svg: swirls1,
-                      height: 60,
-                    ),
-                  ),
-                  pw.Positioned(
-                    bottom: 5,
-                    child: pw.Transform(
-                      transform: Matrix4.diagonal3Values(1, -1, 1),
-                      adjustLayout: true,
-                      child: pw.SvgImage(
-                        svg: swirls1,
-                        height: 60,
-                      ),
-                    ),
-                  ),
-                  pw.Positioned(
-                    top: 5,
-                    left: 5,
-                    child: pw.SvgImage(
-                      svg: swirls3,
-                      height: 160,
-                    ),
-                  ),
-                  pw.Positioned(
-                    top: 5,
-                    right: 5,
-                    child: pw.Transform(
-                      transform: Matrix4.diagonal3Values(-1, 1, 1),
-                      adjustLayout: true,
-                      child: pw.SvgImage(
-                        svg: swirls3,
-                        height: 160,
-                      ),
-                    ),
-                  ),
-                  pw.Positioned(
-                    bottom: 5,
-                    left: 5,
-                    child: pw.Transform(
-                      transform: Matrix4.diagonal3Values(1, -1, 1),
-                      adjustLayout: true,
-                      child: pw.SvgImage(
-                        svg: swirls3,
-                        height: 160,
-                      ),
-                    ),
-                  ),
-                  pw.Positioned(
-                    bottom: 5,
-                    right: 5,
-                    child: pw.Transform(
-                      transform: Matrix4.diagonal3Values(-1, -1, 1),
-                      adjustLayout: true,
-                      child: pw.SvgImage(
-                        svg: swirls3,
-                        height: 160,
-                      ),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.only(
-                      top: 120,
-                      left: 80,
-                      right: 80,
-                      bottom: 80,
-                    ),
-                    child: pw.SvgImage(
-                      svg: garland,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        pageTheme: pw.PageTheme(
+          pageFormat: pageFormat.copyWith(
+              marginBottom: 0,
+              marginLeft: 0,
+              marginRight: 0,
+              marginTop: 0,
+              height: 517),
+          theme: pw.ThemeData.withFont(
+            base: libreBaskerville,
+            italic: libreBaskervilleItalic,
+            bold: libreBaskervilleBold,
           ),
+          buildBackground: (context) =>
+              pw.Image(netBackImage, fit: pw.BoxFit.fill, height: 517),
         ),
       ),
-    ),
-  );
+    );
+  } else {
+    pdf.addPage(
+      pw.Page(
+        build: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.only(
+            top: 145,
+            left: 135,
+            right: 20,
+            bottom: 10,
+          ),
+          child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(
+                    top: 147,
+                  ),
+                  child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.start,
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(left: 70),
+                          child: pw.Text(
+                            myCusInfo.customerCode ?? 'Na',
+                            style: pw.TextStyle(
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(left: 50),
+                          child: pw.Text(
+                            myCusInfo.LastName ?? "",
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 15),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(left: -90),
+                          child: pw.Text(
+                            myCusInfo.FirstName ?? "",
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(left: 0),
+                          child: pw.Text(
+                            myCusInfo.fieldOfStudyDescription ?? "",
+                            style: pw.TextStyle(
+                              font: font,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(height: 20),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(left: -40),
+                          child: pw.Text(
+                            DateFormat('d/M/y').format(DateTime.now()),
+                            style: pw.TextStyle(
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 2,
+                              wordSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ]),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(top: -135, right: 60),
+                  child: pw.Image(netProfileImage,
+                      fit: pw.BoxFit.fill, width: 190, height: 230),
+                ),
+              ]),
+        ),
+        pageTheme: pw.PageTheme(
+          pageFormat: pageFormat.copyWith(
+              marginBottom: 0,
+              marginLeft: 0,
+              marginRight: 0,
+              marginTop: 0,
+              height: 517),
+          theme: pw.ThemeData.withFont(
+            base: libreBaskerville,
+            italic: libreBaskervilleItalic,
+            bold: libreBaskervilleBold,
+          ),
+          buildBackground: (context) =>
+              pw.Image(netBackImage, fit: pw.BoxFit.fill, height: 517),
+        ),
+      ),
+    );
+  }
 
   return pdf.save();
 }

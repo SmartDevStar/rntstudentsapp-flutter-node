@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import 'package:rnt_app/models/theme_model.dart';
@@ -64,6 +65,7 @@ class _RootPageState extends State<RootPage> {
     'soas': false,
     'countries': false,
     'messages': false,
+    'idExpireDate': false,
   };
   final List<int> _pageTrack = [];
   final List<String> _alertedSessionDateTime = [];
@@ -86,6 +88,7 @@ class _RootPageState extends State<RootPage> {
   List<Country> stCountries = [];
   Map<String, List<Customer>> stStudentsByCourseID = {};
   List<Message> stMessages = [];
+  List<FilePickerResult?> stFilePickerResults = [null, null, null];
 
   DateTime? _sessionDateTime = DateTime.now();
   DateTime? _sessionStartingTime = DateTime.now();
@@ -117,6 +120,7 @@ class _RootPageState extends State<RootPage> {
     await getMessages();
     await getCountries();
     await getClasses();
+    await getIDExpireDate();
 
     await setClassScheduleNotification();
   }
@@ -175,6 +179,7 @@ class _RootPageState extends State<RootPage> {
       }
     } else {
       myCusInfo = res['data'];
+      print(myCusInfo.customerTypeID);
       String encodedMyCusInfo = json.encode(res['data']);
       // print("online-myCusInfo : $encodedMyCusInfo");
       await prefs.setString('myCusInfo', encodedMyCusInfo);
@@ -199,6 +204,28 @@ class _RootPageState extends State<RootPage> {
     setState(() {
       isDataLoading['myCusInfo'] = false;
       stMyCustomerInfo = myCusInfo;
+    });
+  }
+
+  Future<void> getIDExpireDate() async {
+    setState(() {
+      isDataLoading['idExpireDate'] = true;
+    });
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final res = await fetchIDExpireDate();
+    if (res['isError']) {
+      isDataFetched['idExpireDate'] = false;
+      // final idExpireDate = prefs.getString('idExpireDate');
+    } else {
+      String encodedIdExpireDate = json.encode(res['data']);
+      await prefs.setString('idExpireDate', encodedIdExpireDate);
+      isDataFetched['idExpireDate'] = true;
+    }
+
+    setState(() {
+      isDataLoading['idExpireDate'] = false;
     });
   }
 
@@ -713,7 +740,7 @@ class _RootPageState extends State<RootPage> {
       isError = true;
     }
 
-    if(isError) {
+    if (isError) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -750,7 +777,7 @@ class _RootPageState extends State<RootPage> {
       isError = true;
     }
 
-    if(isError) {
+    if (isError) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
@@ -827,6 +854,7 @@ class _RootPageState extends State<RootPage> {
 
   Future<void> _logOut() async {
     notificationApi.cancelAllScheduledNotification();
+    timer?.cancel();
     Map<String, dynamic> data = {
       "token": _fcmToken,
     };
@@ -942,6 +970,88 @@ class _RootPageState extends State<RootPage> {
     }
   }
 
+  Future<void> pickFile(int idx) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'xlsx'],
+    );
+    if (result != null) {
+      setState(() {
+        stFilePickerResults[idx] = result;
+      });
+    }
+  }
+
+  Future<void> _handleFileUploadButtonPressed() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    dynamic token = prefs.getString("jwt");
+    int customerID = stMyCustomerInfo.customerID!;
+    String url = "$serverDomain/api/files/upload/$customerID";
+
+    for (var i = 0; i < 3; i++) {
+      FilePickerResult? result = stFilePickerResults[i];
+      if (result != null) {
+        final uploadRequest = http.MultipartRequest(
+          'POST',
+          Uri.parse(url),
+        );
+        uploadRequest.headers['Authorization'] = 'Bearer $token';
+
+        if (!kIsWeb) {
+          String filePath = result.files.single.path!;
+          String fileExt = result.files.single.extension!;
+
+          String mimeType =
+              mimeTypes[fileExt.toLowerCase()] ?? 'application/octet-stream';
+
+          uploadRequest.files.add(
+            await http.MultipartFile.fromPath(
+              'file',
+              filePath,
+              contentType: MediaType.parse(mimeType),
+            ),
+          );
+        } else {
+          _webImage = result.files.single.bytes;
+          Stream<List<int>> stream = Stream.fromIterable([_webImage!]);
+          String mimeType =
+              mimeTypes[result.files.single.extension!.toLowerCase()] ??
+                  'application/octet-stream';
+          http.MultipartFile file = http.MultipartFile(
+              'file', stream, _webImage!.length,
+              filename: result.files.single.name,
+              contentType: MediaType.parse(mimeType));
+          uploadRequest.files.add(file);
+        }
+
+        var response = await uploadRequest.send();
+
+        if (response.statusCode == 200) {
+          setState(() {
+            stFilePickerResults[i] = null;
+          });
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+              "Successfully uploaded..",
+              style: TextStyle(
+                color: Colors.green,
+              ),
+            ),
+          ));
+        } else {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+              "Something's wrong...",
+              style: TextStyle(color: Colors.red),
+            ),
+          ));
+        }
+      }
+    }
+  }
+
   void checkNextRightClass(List<Class> allClasses) {
     DateTime now = DateTime.now();
     List<Class> notAlertedClasses = [];
@@ -985,15 +1095,15 @@ class _RootPageState extends State<RootPage> {
 
     await notificationApi.cancelAllScheduledNotification();
 
-    for (Class item in stClasses) {      
-      if (item.sessionDateTime != null && item.sessionDateTime != "" && 
-        (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
-        
+    for (Class item in stClasses) {
+      if (item.sessionDateTime != null &&
+          item.sessionDateTime != "" &&
+          (item.sessionStatusID == 1 || item.sessionStatusID == 2)) {
         sessionDateTime = DateTime.parse(item.sessionDateTime!);
-        
+
         if (now.isBefore(sessionDateTime)) {
           int differenceInMinutes = sessionDateTime.difference(now).inMinutes;
-          timeZoneDateTime = tz.TZDateTime.from(sessionDateTime, tz.local); 
+          timeZoneDateTime = tz.TZDateTime.from(sessionDateTime, tz.local);
           if (differenceInMinutes > 15) {
             timeZoneDateTime.subtract(const Duration(minutes: 15));
           }
@@ -1003,7 +1113,7 @@ class _RootPageState extends State<RootPage> {
             body: item.classTitle ?? "Next class",
             date: timeZoneDateTime,
             payload: "",
-          ); 
+          );
         }
       }
     }
@@ -1013,7 +1123,7 @@ class _RootPageState extends State<RootPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     messaging = FirebaseMessaging.instance;
     final fcmToken = await messaging.getToken();
-    
+
     _fcmToken = fcmToken!;
     print("Current FCM Token: $_fcmToken");
     final prefsFCMToken = prefs.getString('fcmToken');
@@ -1026,15 +1136,15 @@ class _RootPageState extends State<RootPage> {
       sendFCMToken(data);
     }
 
-    messaging.getInitialMessage().then((value) => {
-        print(value?.data.toString())
-    });
+    messaging
+        .getInitialMessage()
+        .then((value) => {print(value?.data.toString())});
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage message){
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print(message.notification?.body);
       notificationApi.showNotification(
-        id: message.hashCode, 
-        title: message.notification?.title ?? "", 
+        id: message.hashCode,
+        title: message.notification?.title ?? "",
         body: message.notification?.body ?? "",
       );
     });
@@ -1043,7 +1153,8 @@ class _RootPageState extends State<RootPage> {
       print('A new onMessageOpenedApp event was published!');
     });
 
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
@@ -1054,7 +1165,7 @@ class _RootPageState extends State<RootPage> {
   @override
   void initState() {
     super.initState();
-    
+
     _pageTrack.add(0);
     notificationApi = NotificationApi();
     notificationApi.initApi();
@@ -1202,7 +1313,9 @@ class _RootPageState extends State<RootPage> {
                                         stMyCustomerInfo.residentCountryID ??
                                             -1);
                                   })
-                                } else if (value == "UploadDocuments") {
+                                }
+                              else if (value == "UploadDocuments")
+                                {
                                   setState(() {
                                     _activePageIdx = 17;
                                     _pageTrack.add(17);
@@ -1694,51 +1807,52 @@ class _RootPageState extends State<RootPage> {
                     });
                   },
                 ),
-                GestureDetector(
-                  child: Container(
-                    color: const Color(0xFF333F50),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 18),
-                    margin: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.zero,
-                                child: Text(
-                                  "کارت دانشجویی",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 21,
-                                    color: convertHexToColor(
-                                        _themes[0].labelFontColor!),
+                if (stMyCustomerInfo.customerTypeID == 1)
+                  GestureDetector(
+                    child: Container(
+                      color: const Color(0xFF333F50),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 18),
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.zero,
+                                  child: Text(
+                                    "کارت دانشجویی",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 21,
+                                      color: convertHexToColor(
+                                          _themes[0].labelFontColor!),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.zero,
-                          child: IconTheme(
-                            data: IconThemeData(
-                              color: convertHexToColor(
-                                  _themes[0].labelFontColor!),
-                              size: 30,
+                              ],
                             ),
-                            child: const Icon(Icons.contact_mail),
                           ),
-                        ),
-                      ],
+                          Padding(
+                            padding: EdgeInsets.zero,
+                            child: IconTheme(
+                              data: IconThemeData(
+                                color: convertHexToColor(
+                                    _themes[0].labelFontColor!),
+                                size: 30,
+                              ),
+                              child: const Icon(Icons.contact_mail),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/studentcard');
+                      // Navigator.pushNamed(context, '/certificate');
+                    },
                   ),
-                  onTap: () {
-                    // Navigator.pushNamed(context, '/studentcard');
-                    Navigator.pushNamed(context, '/certificate');
-                  },
-                ),
               ],
             ),
           ),
@@ -1854,7 +1968,6 @@ class _RootPageState extends State<RootPage> {
                       "isReminder": false,
                       "messageStatusID": 2,
                     };
-                    print(data);
                     sendMessage(data, 0);
                     messageToUsController.clear();
                   }
@@ -3720,179 +3833,196 @@ class _RootPageState extends State<RootPage> {
           dataColor: convertHexToColor(_themes[0].datafontColor!),
         ),
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-                      child: Text(
-                        "توضیحات مدرک",
-                        style: TextStyle(
-                          color: convertHexToColor(_themes[0].labelFontColor!),
-                          fontSize: 22,
-                        )
-                      ) 
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        child: Container(
-                          color: const Color(0xff8296b0),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 17.0,),
-                            child: Text(
-                              "فایلی انتخاب نشده",
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        onTap: () {
-                          print("tapped!");
-                        },
-                      ),
-                    ),
-                    Expanded(
+            child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 15.0, horizontal: 15.0),
+                      child: Text("توضیحات مدرک",
+                          style: TextStyle(
+                            color:
+                                convertHexToColor(_themes[0].labelFontColor!),
+                            fontSize: 22,
+                          ))),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
                       child: Container(
-                        color: const Color(0xFF333F50),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 17.0,),
+                        color: const Color(0xff8296b0),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 17.0,
+                          ),
                           child: Text(
-                            "File description",
+                            stFilePickerResults[0] != null
+                                ? stFilePickerResults[0]!.files.single.name
+                                : "فایلی انتخاب نشده",
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                            ),
                           ),
                         ),
                       ),
+                      onTap: () {
+                        pickFile(0);
+                      },
                     ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 5,
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        child: Container(
-                          color: const Color(0xff8296b0),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 17.0,),
-                            child: Text(
-                              "فایلی انتخاب نشده",
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        onTap: () {
-                          
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        color: const Color(0xFF333F50),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 17.0,),
-                          child: Text(
-                            "File description",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 5,
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        child: Container(
-                          color: const Color(0xff8296b0),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 17.0,),
-                            child: Text(
-                              "فایلی انتخاب نشده",
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        onTap: () {
-                          
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        color: const Color(0xFF333F50),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 17.0,),
-                          child: Text(
-                            "File description",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 30,
-                ),
-                Container(
-                  alignment: Alignment.center,
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
-                  child: ElevatedButton(
-                    onPressed: () {
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(0.0),
-                      ),
-                    ),
+                  ),
+                  Expanded(
                     child: Container(
-                      alignment: Alignment.center,
-                      height: 40.0,
-                      width: 150,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(0.0),
-                          color: const Color(0xffffc000)),
-                      padding: const EdgeInsets.all(0),
-                      child: const Text(
-                        "ارسال",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
+                      color: const Color(0xFF333F50),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 17.0,
+                        ),
+                        child: Text(
+                          "File Description",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(
+                height: 5,
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      child: Container(
+                        color: const Color(0xff8296b0),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 17.0,
+                          ),
+                          child: Text(
+                            stFilePickerResults[1] != null
+                                ? stFilePickerResults[1]!.files.single.name
+                                : "فایلی انتخاب نشده",
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      onTap: () {
+                        pickFile(1);
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      color: const Color(0xFF333F50),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 17.0,
+                        ),
+                        child: Text(
+                          "File Description",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(
+                height: 5,
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      child: Container(
+                        color: const Color(0xff8296b0),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 17.0,
+                          ),
+                          child: Text(
+                            stFilePickerResults[2] != null
+                                ? stFilePickerResults[2]!.files.single.name
+                                : "فایلی انتخاب نشده",
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      onTap: () {
+                        pickFile(2);
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      color: const Color(0xFF333F50),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 17.0,
+                        ),
+                        child: Text(
+                          "File Description",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(
+                height: 30,
+              ),
+              Container(
+                alignment: Alignment.center,
+                margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
+                child: ElevatedButton(
+                  onPressed: () {
+                    getIDExpireDate();
+                    _handleFileUploadButtonPressed();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.all(0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(0.0),
+                    ),
+                  ),
+                  child: Container(
+                    alignment: Alignment.center,
+                    height: 40.0,
+                    width: 150,
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(0.0),
+                        color: const Color(0xffffc000)),
+                    padding: const EdgeInsets.all(0),
+                    child: const Text(
+                      "ارسال",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          )
-        ),
+              ),
+            ],
+          ),
+        )),
       ],
     );
   }
