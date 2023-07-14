@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 
 class BottomBarItem extends StatelessWidget {
   const BottomBarItem(
-      this.icon, this.label,{
-        super.key,
-        this.onTap,
-        this.color = Colors.grey,
-        this.activeColor = Colors.white,
-        this.isActive = false,
-        this.isNotified = false,
-      });
+    this.icon,
+    this.label, {
+    super.key,
+    this.onTap,
+    this.color = Colors.grey,
+    this.activeColor = Colors.white,
+    this.isActive = false,
+    this.isNotified = false,
+  });
 
   final String label;
   final IconData icon;
@@ -35,14 +36,13 @@ class BottomBarItem extends StatelessWidget {
       children: [
         isNotified ? _buildNotifiedIcon() : _buildIcon(),
         Container(
-          padding: const EdgeInsets.only(bottom: 0),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? activeColor : color,
-            ),
-          )
-        ),
+            padding: const EdgeInsets.only(bottom: 0),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isActive ? activeColor : color,
+              ),
+            )),
       ],
     );
   }
@@ -85,10 +85,10 @@ class BottomBarItem extends StatelessWidget {
               child: Icon(
                 Icons.brightness_1,
                 size: 10.0,
-                color: Color(0xfffffc00),
+                color: Colors.black,
               ),
             ),
-          )
+          ),
         ],
       ),
     );
