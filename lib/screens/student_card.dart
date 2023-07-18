@@ -299,7 +299,7 @@ class _StudentCardState extends State<StudentCardPage> {
             children: <Widget>[
               const SizedBox(height: 187.0),
               _buildStudentInfo(
-                  "Student ID No:", stMyCusInfo.customerCode ?? 'Na',
+                  "Student ID No:", "*${stMyCusInfo.customerCode}*",
                   lan: 'En'),
               const SizedBox(height: 2.0),
               _buildStudentInfo(
@@ -340,7 +340,7 @@ class _StudentCardState extends State<StudentCardPage> {
               Padding(
                 padding: const EdgeInsets.only(),
                 child: Text(
-                  stMyCusInfo.customerCode ?? "00000000",
+                  "*${stMyCusInfo.customerCode}*",
                   textAlign: TextAlign.right,
                   style: const TextStyle(
                     fontFamily: 'fre3of9x',
@@ -379,7 +379,7 @@ class _StudentCardState extends State<StudentCardPage> {
             Padding(
               padding: const EdgeInsets.only(left: 10),
               child: Text(
-                stMyCusInfo.customerCode ?? "00000000",
+                "*${stMyCusInfo.customerCode}*",
                 textAlign: TextAlign.right,
                 style: const TextStyle(
                   fontFamily: 'fre3of9x',
@@ -396,7 +396,7 @@ class _StudentCardState extends State<StudentCardPage> {
           children: <Widget>[
             const SizedBox(height: 173.0),
             _buildStudentInfo(
-                stMyCusInfo.customerCode ?? 'Na', ":شماره دانشجویی"),
+                "*${stMyCusInfo.customerCode}*", ":شماره دانشجویی"),
             const SizedBox(height: 2.0),
             _buildStudentInfo(stMyCusInfo.LastName ?? 'Na', ":نام خانوادگی"),
             const SizedBox(height: 2.0),
